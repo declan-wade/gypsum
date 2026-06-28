@@ -1,0 +1,420 @@
+// CRM schema for Next.js + PostgreSQL
+// Money is stored as Decimal(12,2). Tax rates as Decimal(5,4) (e.g. 0.1000 = 10% GST).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum CompanyStatus {
+  LEAD
+  PROSPECT
+  ACTIVE
+  INACTIVE
+}
+
+enum DealStage {
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  CHEQUE
+  OTHER
+}
+
+// ---------- Core CRM ----------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole @default(MEMBER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedCompanies Company[]
+  ownedDeals     Deal[]
+  timeEntries    TimeEntry[]
+  quotes         Quote[]
+  invoices       Invoice[]
+}
+
+model Company {
+  id       String        @id @default(cuid())
+  name     String
+  website  String?
+  email    String?
+  phone    String?
+  industry String?
+  status   CompanyStatus @default(LEAD)
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postcode     String?
+  country      String?
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+  deals    Deal[]
+  projects Project[]
+  quotes   Quote[]
+  invoices Invoice[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Contact {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  jobTitle  String?
+  isPrimary Boolean @default(false)
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals    Deal[]
+  quotes   Quote[]
+  invoices Invoice[]
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  title             String
+  value             Decimal   @db.Decimal(12, 2)
+  stage             DealStage @default(QUALIFICATION)
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([stage])
+}
+
+// ---------- Projects & Time Tracking ----------
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  hourlyRate  Decimal?      @db.Decimal(10, 2)
+  budget      Decimal?      @db.Decimal(12, 2)
+  startDate   DateTime?
+  endDate     DateTime?
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks       Task[]
+  timeEntries TimeEntry[]
+
+  @@index([companyId])
+  @@index([status])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  dueDate     DateTime?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  timeEntries TimeEntry[]
+
+  @@index([projectId])
+}
+
+model TimeEntry {
+  id              String   @id @default(cuid())
+  description     String?
+  date            DateTime
+  durationMinutes Int
+  billable        Boolean  @default(true)
+  hourlyRate      Decimal? @db.Decimal(10, 2)
+  invoiced        Boolean  @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  // Set when this entry is rolled up onto a billed line item.
+  invoiceLineItemId String?
+  invoiceLineItem   InvoiceLineItem? @relation(fields: [invoiceLineItemId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([date])
+  @@index([invoiceLineItemId])
+}
+
+// ---------- Catalog & Tax ----------
+
+model TaxRate {
+  id        String  @id @default(cuid())
+  name      String
+  rate      Decimal @db.Decimal(5, 4) // e.g. 0.1000 = 10% GST
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products         Product[]
+  quoteLineItems   QuoteLineItem[]
+  invoiceLineItems InvoiceLineItem[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  sku         String?     @unique
+  type        ProductType @default(SERVICE)
+  unitPrice   Decimal     @db.Decimal(12, 2)
+
+  taxRateId String?
+  taxRate   TaxRate? @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quoteLineItems   QuoteLineItem[]
+  invoiceLineItems InvoiceLineItem[]
+
+  @@index([taxRateId])
+}
+
+// ---------- Quotes ----------
+
+model Quote {
+  id         String      @id @default(cuid())
+  number     String      @unique
+  status     QuoteStatus @default(DRAFT)
+  issueDate  DateTime    @default(now())
+  expiryDate DateTime?
+  notes      String?
+
+  // Denormalised totals, recalculated from line items on write.
+  subtotal  Decimal @default(0) @db.Decimal(12, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @default(0) @db.Decimal(12, 2)
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineItems QuoteLineItem[]
+  invoice   Invoice? // populated when this quote is converted to an invoice
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model QuoteLineItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  lineTotal   Decimal @db.Decimal(12, 2)
+  position    Int     @default(0)
+
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  taxRateId String?
+  taxRate   TaxRate? @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+  @@index([productId])
+  @@index([taxRateId])
+}
+
+// ---------- Invoices ----------
+
+model Invoice {
+  id        String        @id @default(cuid())
+  number    String        @unique
+  status    InvoiceStatus @default(DRAFT)
+  issueDate DateTime      @default(now())
+  dueDate   DateTime?
+  notes     String?
+
+  // Denormalised totals, recalculated from line items / payments on write.
+  subtotal   Decimal @default(0) @db.Decimal(12, 2)
+  taxAmount  Decimal @default(0) @db.Decimal(12, 2)
+  total      Decimal @default(0) @db.Decimal(12, 2)
+  amountPaid Decimal @default(0) @db.Decimal(12, 2)
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  // Optional link back to the quote this invoice was generated from.
+  quoteId String? @unique
+  quote   Quote?  @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineItems InvoiceLineItem[]
+  payments  Payment[]
+
+  @@index([companyId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  lineTotal   Decimal @db.Decimal(12, 2)
+  position    Int     @default(0)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  taxRateId String?
+  taxRate   TaxRate? @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
+
+  // Time entries rolled up into this line item (for time-based billing).
+  timeEntries TimeEntry[]
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@index([taxRateId])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  amount    Decimal       @db.Decimal(12, 2)
+  method    PaymentMethod @default(BANK_TRANSFER)
+  paidAt    DateTime      @default(now())
+  reference String?
+  notes     String?
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}

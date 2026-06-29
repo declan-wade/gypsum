@@ -3,34 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { recalcInvoiceTotals } from "@/lib/invoice-totals";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-
-// Recomputes the denormalised invoice totals from its current line items.
-async function recalcInvoiceTotals(invoiceId: string) {
-  const items = await prisma.invoiceLineItem.findMany({
-    where: { invoiceId },
-    include: { taxRate: true },
-  });
-
-  let subtotal = 0;
-  let taxAmount = 0;
-  for (const item of items) {
-    const lineTotal = Number(item.lineTotal);
-    subtotal += lineTotal;
-    if (item.taxRate) {
-      taxAmount += lineTotal * Number(item.taxRate.rate);
-    }
-  }
-
-  subtotal = round2(subtotal);
-  taxAmount = round2(taxAmount);
-
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { subtotal, taxAmount, total: round2(subtotal + taxAmount) },
-  });
-}
 
 export async function addInvoiceLineItem(
   invoiceId: string,
@@ -39,29 +14,20 @@ export async function addInvoiceLineItem(
     description: string;
     quantity: number;
     unitPrice: number;
+    taxable: boolean;
   }
 ) {
-  // A product carries its own tax rate; copy it onto the line item.
-  const taxRateId = data.productId
-    ? (
-        await prisma.product.findUnique({
-          where: { id: data.productId },
-          select: { taxRateId: true },
-        })
-      )?.taxRateId ?? null
-    : null;
-
   const position = await prisma.invoiceLineItem.count({ where: { invoiceId } });
 
   await prisma.invoiceLineItem.create({
     data: {
       invoiceId,
       productId: data.productId,
-      taxRateId,
       description: data.description,
       quantity: data.quantity,
       unitPrice: data.unitPrice,
       lineTotal: round2(data.quantity * data.unitPrice),
+      taxable: data.taxable,
       position,
     },
   });

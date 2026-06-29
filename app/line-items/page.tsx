@@ -24,6 +24,7 @@ export default async function Page() {
     quantity: Number(item.quantity),
     unitPrice: Number(item.unitPrice),
     lineTotal: Number(item.lineTotal),
+    taxable: item.taxable,
   }));
 
   const invoiceOptions = invoices.map((i) => ({ value: i.id, label: i.number }));

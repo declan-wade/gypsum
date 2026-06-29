@@ -31,7 +31,13 @@ const lineItemSchema = z.object({
     .string()
     .min(1, "Required.")
     .refine((v) => !isNaN(Number(v)) && Number(v) >= 0, "Enter a valid amount."),
+  taxable: z.enum(["yes", "no"]),
 });
+
+const gstOptions = [
+  { value: "yes", label: "Apply GST (10%)" },
+  { value: "no", label: "No GST" },
+];
 
 interface AddLineItemFormProps {
   invoiceId: string;
@@ -46,6 +52,7 @@ export function AddLineItemForm({ invoiceId, products }: AddLineItemFormProps) {
       description: "",
       quantity: "1",
       unitPrice: "",
+      taxable: "yes" as "yes" | "no",
     },
     validators: { onSubmit: lineItemSchema },
     onSubmit: async ({ value }) => {
@@ -54,6 +61,7 @@ export function AddLineItemForm({ invoiceId, products }: AddLineItemFormProps) {
         description: value.description,
         quantity: Number(value.quantity),
         unitPrice: Number(value.unitPrice),
+        taxable: value.taxable === "yes",
       });
       successToast("Line item added.");
       onSuccess?.();
@@ -93,6 +101,9 @@ export function AddLineItemForm({ invoiceId, products }: AddLineItemFormProps) {
         </form.Field>
         <form.Field name="unitPrice">
           {(field) => <FormNumberField field={field} label="Unit Price" placeholder="0.00" step="0.01" />}
+        </form.Field>
+        <form.Field name="taxable">
+          {(field) => <FormSelectField field={field} label="GST" placeholder="Select GST" options={gstOptions} />}
         </form.Field>
       </FieldGroup>
       <FormActions />

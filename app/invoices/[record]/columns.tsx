@@ -15,6 +15,7 @@ export type LineItemRow = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  taxable: boolean;
 };
 
 function LineItemRowActions({ id }: { id: string }) {
@@ -61,6 +62,11 @@ export const columns: ColumnDef<LineItemRow>[] = [
     accessorKey: "lineTotal",
     header: "Total",
     cell: ({ row }) => formatMoney(row.original.lineTotal),
+  },
+  {
+    accessorKey: "taxable",
+    header: "GST",
+    cell: ({ row }) => (row.original.taxable ? "10%" : "—"),
   },
   {
     id: "actions",

@@ -49,6 +49,7 @@ export default async function Page({
     quantity: Number(item.quantity),
     unitPrice: Number(item.unitPrice),
     lineTotal: Number(item.lineTotal),
+    taxable: item.taxable,
   }));
 
   const productOptions = products.map((p) => ({

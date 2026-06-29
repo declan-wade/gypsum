@@ -32,7 +32,7 @@ export function PageLayout({ title, actions, children }: PageLayoutProps) {
           />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbItem>
                 <BreadcrumbLink href="#">{title}</BreadcrumbLink>
               </BreadcrumbItem>
             </BreadcrumbList>

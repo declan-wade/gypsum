@@ -11,8 +11,16 @@ import {
 import { urlSchema } from "@/lib/schemas";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createCompany } from "./actions";
+import { createCompany, updateCompany } from "./actions";
 import type { CompanyStatus } from "@prisma/client";
+
+export interface CompanyRecord {
+  id: string;
+  name: string;
+  website: string;
+  industry: string;
+  status: CompanyStatus;
+}
 
 const companySchema = z.object({
   name: z.string().min(2, "Must be at least 2 characters.").max(100),
@@ -28,19 +36,24 @@ const statusOptions = [
   { value: "INACTIVE", label: "Inactive" },
 ];
 
-export function CompanyForm() {
+export function CompanyForm({ record }: { record?: CompanyRecord }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      name: "",
-      website: "",
-      industry: "",
-      status: "LEAD" as CompanyStatus,
+      name: record?.name ?? "",
+      website: record?.website ?? "",
+      industry: record?.industry ?? "",
+      status: record?.status ?? ("LEAD" as CompanyStatus),
     },
     validators: { onSubmit: companySchema },
     onSubmit: async ({ value }) => {
-      await createCompany(value);
-      successToast("Company created successfully!");
+      if (record) {
+        await updateCompany(record.id, value);
+        successToast("Company updated successfully!");
+      } else {
+        await createCompany(value);
+        successToast("Company created successfully!");
+      }
       onSuccess?.();
     },
   });

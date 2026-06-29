@@ -16,6 +16,7 @@ export default async function Page() {
     sku: product.sku,
     type: product.type,
     unitPrice: Number(product.unitPrice),
+    description: product.description,
   }));
 
   return (

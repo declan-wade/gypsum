@@ -12,8 +12,21 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createProject } from "./actions";
+import { createProject, updateProject } from "./actions";
+import { toDateInputValue } from "@/lib/format";
 import type { ProjectStatus } from "@prisma/client";
+
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  companyId: string;
+  status: ProjectStatus;
+  hourlyRate: number | null;
+  budget: number | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  description: string | null;
+}
 
 const optionalAmount = z
   .string()
@@ -40,25 +53,27 @@ const statusOptions = [
 export function ProjectForm({
   companies,
   companyId,
+  record,
 }: {
   companies?: { value: string; label: string }[];
   companyId?: string;
+  record?: ProjectRecord;
 }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      name: "",
-      companyId: companyId ?? "",
-      status: "ACTIVE" as ProjectStatus,
-      hourlyRate: "",
-      budget: "",
-      startDate: "",
-      endDate: "",
-      description: "",
+      name: record?.name ?? "",
+      companyId: record?.companyId ?? companyId ?? "",
+      status: record?.status ?? ("ACTIVE" as ProjectStatus),
+      hourlyRate: record?.hourlyRate != null ? String(record.hourlyRate) : "",
+      budget: record?.budget != null ? String(record.budget) : "",
+      startDate: toDateInputValue(record?.startDate),
+      endDate: toDateInputValue(record?.endDate),
+      description: record?.description ?? "",
     },
     validators: { onSubmit: projectSchema },
     onSubmit: async ({ value }) => {
-      await createProject({
+      const payload = {
         name: value.name,
         companyId: value.companyId,
         status: value.status,
@@ -67,8 +82,14 @@ export function ProjectForm({
         startDate: value.startDate ? new Date(value.startDate) : null,
         endDate: value.endDate ? new Date(value.endDate) : null,
         description: value.description || null,
-      });
-      successToast("Project created successfully!");
+      };
+      if (record) {
+        await updateProject(record.id, payload);
+        successToast("Project updated successfully!");
+      } else {
+        await createProject(payload);
+        successToast("Project created successfully!");
+      }
       onSuccess?.();
     },
   });

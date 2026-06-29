@@ -10,7 +10,17 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createContact } from "./actions";
+import { createContact, updateContact } from "./actions";
+
+export interface ContactRecord {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  jobTitle: string;
+  companyId: string;
+}
 
 const contactSchema = z.object({
   firstName: z.string().min(2, "Must be at least 2 characters.").max(100),
@@ -29,23 +39,29 @@ interface CompanyOption {
 interface ContactFormProps {
   companies?: CompanyOption[];
   companyId?: string;
+  record?: ContactRecord;
 }
 
-export function ContactForm({ companies, companyId }: ContactFormProps) {
+export function ContactForm({ companies, companyId, record }: ContactFormProps) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      jobTitle: "",
-      companyId: companyId ?? "",
+      firstName: record?.firstName ?? "",
+      lastName: record?.lastName ?? "",
+      email: record?.email ?? "",
+      phone: record?.phone ?? "",
+      jobTitle: record?.jobTitle ?? "",
+      companyId: record?.companyId ?? companyId ?? "",
     },
     validators: { onSubmit: contactSchema },
     onSubmit: async ({ value }) => {
-      await createContact(value);
-      successToast("Contact created successfully!");
+      if (record) {
+        await updateContact(record.id, value);
+        successToast("Contact updated successfully!");
+      } else {
+        await createContact(value);
+        successToast("Contact created successfully!");
+      }
       onSuccess?.();
     },
   });

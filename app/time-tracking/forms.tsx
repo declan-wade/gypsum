@@ -12,7 +12,18 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createTimeEntry } from "./actions";
+import { createTimeEntry, updateTimeEntry } from "./actions";
+import { toDateInputValue } from "@/lib/format";
+
+export interface TimeEntryRecord {
+  id: string;
+  userId: string;
+  projectId: string;
+  taskId: string | null;
+  date: Date;
+  durationMinutes: number;
+  description: string | null;
+}
 
 const timeEntrySchema = z.object({
   userId: z.string().min(1, "Please select a user."),
@@ -26,34 +37,44 @@ const timeEntrySchema = z.object({
 });
 
 interface TimeEntryFormProps {
-  users: { value: string; label: string }[];
+  // Shown as a select when provided; on row edit it's omitted and the record's
+  // user is kept (same approach as the company/project selects elsewhere).
+  users?: { value: string; label: string }[];
   // List page passes selectable projects; the project/task pages pass a fixed id.
   projects?: { value: string; label: string }[];
   projectId?: string;
   taskId?: string;
+  record?: TimeEntryRecord;
 }
 
-export function TimeEntryForm({ users, projects, projectId, taskId }: TimeEntryFormProps) {
+export function TimeEntryForm({ users, projects, projectId, taskId, record }: TimeEntryFormProps) {
   const onSuccess = useModalSuccess();
+  const fixedTaskId = record?.taskId ?? taskId ?? null;
   const form = useForm({
     defaultValues: {
-      userId: "",
-      projectId: projectId ?? "",
-      date: "",
-      durationMinutes: "",
-      description: "",
+      userId: record?.userId ?? "",
+      projectId: record?.projectId ?? projectId ?? "",
+      date: toDateInputValue(record?.date),
+      durationMinutes: record?.durationMinutes != null ? String(record.durationMinutes) : "",
+      description: record?.description ?? "",
     },
     validators: { onSubmit: timeEntrySchema },
     onSubmit: async ({ value }) => {
-      await createTimeEntry({
+      const payload = {
         userId: value.userId,
         projectId: value.projectId,
-        taskId: taskId ?? null,
+        taskId: fixedTaskId,
         date: new Date(value.date),
         durationMinutes: Number(value.durationMinutes),
         description: value.description || null,
-      });
-      successToast("Time entry created successfully!");
+      };
+      if (record) {
+        await updateTimeEntry(record.id, payload);
+        successToast("Time entry updated successfully!");
+      } else {
+        await createTimeEntry(payload);
+        successToast("Time entry created successfully!");
+      }
       onSuccess?.();
     },
   });
@@ -66,11 +87,13 @@ export function TimeEntryForm({ users, projects, projectId, taskId }: TimeEntryF
       }}
     >
       <FieldGroup>
-        <form.Field name="userId">
-          {(field) => (
-            <FormSelectField field={field} label="User" placeholder="Select a user" options={users} />
-          )}
-        </form.Field>
+        {users && (
+          <form.Field name="userId">
+            {(field) => (
+              <FormSelectField field={field} label="User" placeholder="Select a user" options={users} />
+            )}
+          </form.Field>
+        )}
         {!projectId && projects && (
           <form.Field name="projectId">
             {(field) => (

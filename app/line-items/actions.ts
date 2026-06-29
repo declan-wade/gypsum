@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity";
 
 export async function createLineItem(data: {
   invoiceId: string;
@@ -16,5 +17,11 @@ export async function createLineItem(data: {
       unitPrice: data.unitPrice,
       lineTotal: data.quantity * data.unitPrice,
     },
+  });
+  await logActivity({
+    entityType: "Invoice",
+    entityId: data.invoiceId,
+    action: "UPDATED",
+    summary: `Added line item: ${data.description}`,
   });
 }

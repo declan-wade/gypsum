@@ -11,8 +11,18 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createTask } from "./actions";
+import { createTask, updateTask } from "./actions";
+import { toDateInputValue } from "@/lib/format";
 import type { TaskStatus } from "@prisma/client";
+
+export interface TaskRecord {
+  id: string;
+  title: string;
+  projectId: string;
+  status: TaskStatus;
+  dueDate: Date | null;
+  description: string | null;
+}
 
 const taskSchema = z.object({
   title: z.string().min(2, "Must be at least 2 characters.").max(200),
@@ -32,28 +42,35 @@ interface TaskFormProps {
   // List page passes selectable projects; the project detail page passes a fixed id.
   projects?: { value: string; label: string }[];
   projectId?: string;
+  record?: TaskRecord;
 }
 
-export function TaskForm({ projects, projectId }: TaskFormProps) {
+export function TaskForm({ projects, projectId, record }: TaskFormProps) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      title: "",
-      projectId: projectId ?? "",
-      status: "TODO" as TaskStatus,
-      dueDate: "",
-      description: "",
+      title: record?.title ?? "",
+      projectId: record?.projectId ?? projectId ?? "",
+      status: record?.status ?? ("TODO" as TaskStatus),
+      dueDate: toDateInputValue(record?.dueDate),
+      description: record?.description ?? "",
     },
     validators: { onSubmit: taskSchema },
     onSubmit: async ({ value }) => {
-      await createTask({
+      const payload = {
         title: value.title,
         projectId: value.projectId,
         status: value.status,
         dueDate: value.dueDate ? new Date(value.dueDate) : null,
         description: value.description || null,
-      });
-      successToast("Task created successfully!");
+      };
+      if (record) {
+        await updateTask(record.id, payload);
+        successToast("Task updated successfully!");
+      } else {
+        await createTask(payload);
+        successToast("Task created successfully!");
+      }
       onSuccess?.();
     },
   });

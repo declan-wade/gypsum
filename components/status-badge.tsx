@@ -19,6 +19,10 @@ const toneClasses: Record<Tone, string> = {
 
 // Maps every CRM enum value (statuses, stages, roles, types) to a colour tone.
 const statusTones: Record<string, Tone> = {
+  // activity-log actions
+  CREATED: "green",
+  UPDATED: "amber",
+  DELETED: "red",
   // success / positive
   ACTIVE: "green",
   WON: "green",

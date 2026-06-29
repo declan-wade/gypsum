@@ -11,8 +11,17 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createProduct } from "./actions";
+import { createProduct, updateProduct } from "./actions";
 import type { ProductType } from "@prisma/client";
+
+export interface ProductRecord {
+  id: string;
+  name: string;
+  sku: string | null;
+  type: ProductType;
+  unitPrice: number;
+  description: string | null;
+}
 
 const productSchema = z.object({
   name: z.string().min(2, "Must be at least 2 characters.").max(150),
@@ -30,26 +39,32 @@ const typeOptions = [
   { value: "PRODUCT", label: "Product" },
 ];
 
-export function ProductForm() {
+export function ProductForm({ record }: { record?: ProductRecord }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      name: "",
-      sku: "",
-      type: "SERVICE" as ProductType,
-      unitPrice: "",
-      description: "",
+      name: record?.name ?? "",
+      sku: record?.sku ?? "",
+      type: record?.type ?? ("SERVICE" as ProductType),
+      unitPrice: record?.unitPrice != null ? String(record.unitPrice) : "",
+      description: record?.description ?? "",
     },
     validators: { onSubmit: productSchema },
     onSubmit: async ({ value }) => {
-      await createProduct({
+      const payload = {
         name: value.name,
         sku: value.sku || null,
         type: value.type,
         unitPrice: Number(value.unitPrice),
         description: value.description || null,
-      });
-      successToast("Product created successfully!");
+      };
+      if (record) {
+        await updateProduct(record.id, payload);
+        successToast("Product updated successfully!");
+      } else {
+        await createProduct(payload);
+        successToast("Product created successfully!");
+      }
       onSuccess?.();
     },
   });

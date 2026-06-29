@@ -10,8 +10,15 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createUser } from "./actions";
+import { createUser, updateUser } from "./actions";
 import type { UserRole } from "@prisma/client";
+
+export interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
 
 const userSchema = z.object({
   name: z.string().min(2, "Must be at least 2 characters.").max(100),
@@ -25,22 +32,23 @@ const roleOptions = [
   { value: "ADMIN", label: "Admin" },
 ];
 
-export function UserForm() {
+export function UserForm({ record }: { record?: UserRecord }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      name: "",
-      email: "",
-      role: "MEMBER" as UserRole,
+      name: record?.name ?? "",
+      email: record?.email ?? "",
+      role: record?.role ?? ("MEMBER" as UserRole),
     },
     validators: { onSubmit: userSchema },
     onSubmit: async ({ value }) => {
-      await createUser({
-        name: value.name,
-        email: value.email,
-        role: value.role,
-      });
-      successToast("User created successfully!");
+      if (record) {
+        await updateUser(record.id, value);
+        successToast("User updated successfully!");
+      } else {
+        await createUser(value);
+        successToast("User created successfully!");
+      }
       onSuccess?.();
     },
   });

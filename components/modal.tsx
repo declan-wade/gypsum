@@ -45,14 +45,26 @@ export function CommonModal({ children, open, onOpenChange, title, description }
 }
 
 interface ModalButtonProps {
-  label: string
+  label?: string
+  icon?: React.ReactNode
   title?: string
   description?: string
   children: React.ReactNode
   className?: string
+  variant?: React.ComponentProps<typeof Button>["variant"]
+  size?: React.ComponentProps<typeof Button>["size"]
 }
 
-export function ModalButton({ label, title, description, children, className }: ModalButtonProps) {
+export function ModalButton({
+  label,
+  icon,
+  title,
+  description,
+  children,
+  className,
+  variant,
+  size,
+}: ModalButtonProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
@@ -63,7 +75,14 @@ export function ModalButton({ label, title, description, children, className }: 
 
   return (
     <>
-      <Button className={className} onClick={() => setOpen(true)}>
+      <Button
+        variant={variant}
+        size={size}
+        className={className}
+        aria-label={label ?? title}
+        onClick={() => setOpen(true)}
+      >
+        {icon}
         {label}
       </Button>
       <CommonModal open={open} onOpenChange={setOpen} title={title} description={description}>

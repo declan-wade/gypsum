@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { PageLayout } from "@/components/page-layout"
@@ -16,6 +16,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import { columns as contactColumns } from "@/app/contacts/columns"
 import { ContactForm } from "@/app/contacts/forms"
+import { CompanyForm } from "@/app/companies/forms"
 import { columns as dealColumns, type DealRow } from "@/app/deals/columns"
 import { DealForm } from "@/app/deals/forms"
 import { columns as quoteColumns, type QuoteRow } from "@/app/quotes/columns"
@@ -26,6 +27,8 @@ import { columns as userColumns, type UserRow } from "@/app/users/columns"
 import { columns as projectColumns, type ProjectRow } from "@/app/projects/columns"
 import { ProjectForm } from "@/app/projects/forms"
 import { StatusBadge } from "@/components/status-badge"
+import { ActivityDrawer } from "@/components/activity-drawer"
+import { getActivities } from "@/lib/activity"
 
 // Renders a titled related-records sub-table. Generic so each section keeps the
 // row typing from the entity's own column definitions.
@@ -61,7 +64,7 @@ export default async function Page({
 }) {
   const { record } = await params
 
-  const [company, users] = await Promise.all([
+  const [company, users, activities] = await Promise.all([
     prisma.company.findUnique({
       where: { id: record },
       include: {
@@ -85,6 +88,7 @@ export default async function Page({
       },
       orderBy: { name: "asc" },
     }),
+    getActivities("Company", record),
   ])
 
   if (!company) {
@@ -96,6 +100,7 @@ export default async function Page({
     title: deal.title,
     value: Number(deal.value),
     stage: deal.stage,
+    companyId: deal.companyId,
     companyName: company.name,
     expectedCloseDate: deal.expectedCloseDate,
   }))
@@ -103,11 +108,13 @@ export default async function Page({
   const quoteRows: QuoteRow[] = company.quotes.map((quote) => ({
     id: quote.id,
     number: quote.number,
+    companyId: quote.companyId,
     companyName: company.name,
     status: quote.status,
     total: Number(quote.total),
     issueDate: quote.issueDate,
     expiryDate: quote.expiryDate,
+    notes: quote.notes,
   }))
 
   const invoiceRows: InvoiceRow[] = company.invoices.map((invoice) => ({
@@ -164,10 +171,29 @@ export default async function Page({
     <PageLayout
       title={company.name}
       actions={
-        <Button variant="outline" nativeButton={false} render={<Link href="/companies" />}>
-          <ArrowLeftIcon />
-          Back
-        </Button>
+        <>
+          <Button variant="outline" nativeButton={false} render={<Link href="/companies" />}>
+            <ArrowLeftIcon />
+            Back
+          </Button>
+          <ModalButton
+            label="Edit"
+            icon={<PencilIcon />}
+            variant="outline"
+            title="Edit Company"
+          >
+            <CompanyForm
+              record={{
+                id: company.id,
+                name: company.name,
+                website: company.website ?? "",
+                industry: company.industry ?? "",
+                status: company.status,
+              }}
+            />
+          </ModalButton>
+          <ActivityDrawer activities={activities} />
+        </>
       }
     >
       <Card>

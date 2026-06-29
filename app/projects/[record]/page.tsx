@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { PageLayout } from "@/components/page-layout";
@@ -17,7 +17,10 @@ import {
 import { columns as taskColumns, type TaskRow } from "@/app/tasks/columns";
 import { TaskForm } from "@/app/tasks/forms";
 import { TimeEntryForm } from "@/app/time-tracking/forms";
+import { ProjectForm } from "@/app/projects/forms";
 import { StatusBadge } from "@/components/status-badge";
+import { ActivityDrawer } from "@/components/activity-drawer";
+import { getActivities } from "@/lib/activity";
 
 function RelatedSection<T>({
   title,
@@ -51,7 +54,7 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [project, users] = await Promise.all([
+  const [project, users, activities] = await Promise.all([
     prisma.project.findUnique({
       where: { id: record },
       include: {
@@ -64,6 +67,7 @@ export default async function Page({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    getActivities("Project", record),
   ]);
 
   if (!project) {
@@ -83,8 +87,11 @@ export default async function Page({
   const timeEntryRows: TimeEntryRow[] = project.timeEntries.map((entry) => ({
     id: entry.id,
     date: entry.date,
+    userId: entry.userId,
     userName: entry.user.name,
+    projectId: entry.projectId,
     projectName: project.name,
+    taskId: entry.taskId,
     durationMinutes: entry.durationMinutes,
     billable: entry.billable,
     description: entry.description,
@@ -119,10 +126,28 @@ export default async function Page({
     <PageLayout
       title={project.name}
       actions={
-        <Button variant="outline" nativeButton={false} render={<Link href="/projects" />}>
-          <ArrowLeftIcon />
-          Back
-        </Button>
+        <>
+          <Button variant="outline" nativeButton={false} render={<Link href="/projects" />}>
+            <ArrowLeftIcon />
+            Back
+          </Button>
+          <ModalButton label="Edit" icon={<PencilIcon />} variant="outline" title="Edit Project">
+            <ProjectForm
+              record={{
+                id: project.id,
+                name: project.name,
+                companyId: project.companyId,
+                status: project.status,
+                hourlyRate: project.hourlyRate === null ? null : Number(project.hourlyRate),
+                budget: project.budget === null ? null : Number(project.budget),
+                startDate: project.startDate,
+                endDate: project.endDate,
+                description: project.description,
+              }}
+            />
+          </ModalButton>
+          <ActivityDrawer activities={activities} />
+        </>
       }
     >
       <Card>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
@@ -10,8 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { formatMoney, formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
+import { ActivityDrawer } from "@/components/activity-drawer";
+import { getActivities } from "@/lib/activity";
 import { columns } from "./columns";
 import { AddLineItemForm } from "./forms";
+import { InvoiceForm } from "@/app/invoices/forms";
 
 export default async function Page({
   params,
@@ -20,7 +23,7 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [invoice, products] = await Promise.all([
+  const [invoice, products, activities] = await Promise.all([
     prisma.invoice.findUnique({
       where: { id: record },
       include: {
@@ -32,6 +35,7 @@ export default async function Page({
       select: { id: true, name: true, description: true, unitPrice: true },
       orderBy: { name: "asc" },
     }),
+    getActivities("Invoice", record),
   ]);
 
   if (!invoice) {
@@ -79,10 +83,25 @@ export default async function Page({
     <PageLayout
       title={`Invoice ${invoice.number}`}
       actions={
-        <Button variant="outline" nativeButton={false} render={<Link href="/invoices" />}>
-          <ArrowLeftIcon />
-          Back
-        </Button>
+        <>
+          <Button variant="outline" nativeButton={false} render={<Link href="/invoices" />}>
+            <ArrowLeftIcon />
+            Back
+          </Button>
+          <ModalButton label="Edit" icon={<PencilIcon />} variant="outline" title="Edit Invoice">
+            <InvoiceForm
+              record={{
+                id: invoice.id,
+                number: invoice.number,
+                status: invoice.status,
+                companyId: invoice.companyId,
+                dueDate: invoice.dueDate,
+                notes: invoice.notes,
+              }}
+            />
+          </ModalButton>
+          <ActivityDrawer activities={activities} />
+        </>
       }
     >
       <Card>

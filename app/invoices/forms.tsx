@@ -11,8 +11,18 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createInvoice } from "./actions";
+import { createInvoice, updateInvoice } from "./actions";
+import { toDateInputValue } from "@/lib/format";
 import type { InvoiceStatus } from "@prisma/client";
+
+export interface InvoiceRecord {
+  id: string;
+  number: string;
+  status: InvoiceStatus;
+  companyId: string;
+  dueDate: Date | null;
+  notes: string | null;
+}
 
 const invoiceSchema = z.object({
   number: z.string().min(1, "Required.").max(50),
@@ -34,29 +44,37 @@ const statusOptions = [
 export function InvoiceForm({
   companies,
   companyId,
+  record,
 }: {
   companies?: { value: string; label: string }[];
   companyId?: string;
+  record?: InvoiceRecord;
 }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      number: "",
-      status: "DRAFT" as InvoiceStatus,
-      companyId: companyId ?? "",
-      dueDate: "",
-      notes: "",
+      number: record?.number ?? "",
+      status: record?.status ?? ("DRAFT" as InvoiceStatus),
+      companyId: record?.companyId ?? companyId ?? "",
+      dueDate: toDateInputValue(record?.dueDate),
+      notes: record?.notes ?? "",
     },
     validators: { onSubmit: invoiceSchema },
     onSubmit: async ({ value }) => {
-      await createInvoice({
+      const payload = {
         number: value.number,
         status: value.status,
         companyId: value.companyId,
         dueDate: value.dueDate ? new Date(value.dueDate) : null,
         notes: value.notes || null,
-      });
-      successToast("Invoice created successfully!");
+      };
+      if (record) {
+        await updateInvoice(record.id, payload);
+        successToast("Invoice updated successfully!");
+      } else {
+        await createInvoice(payload);
+        successToast("Invoice created successfully!");
+      }
       onSuccess?.();
     },
   });

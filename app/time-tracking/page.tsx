@@ -24,8 +24,11 @@ export default async function Page() {
   const data = entries.map((entry) => ({
     id: entry.id,
     date: entry.date,
+    userId: entry.userId,
     userName: entry.user.name,
+    projectId: entry.projectId,
     projectName: entry.project.name,
+    taskId: entry.taskId,
     durationMinutes: entry.durationMinutes,
     billable: entry.billable,
     description: entry.description,

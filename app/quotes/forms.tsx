@@ -11,8 +11,18 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createQuote } from "./actions";
+import { createQuote, updateQuote } from "./actions";
+import { toDateInputValue } from "@/lib/format";
 import type { QuoteStatus } from "@prisma/client";
+
+export interface QuoteRecord {
+  id: string;
+  number: string;
+  status: QuoteStatus;
+  companyId: string;
+  expiryDate: Date | null;
+  notes: string | null;
+}
 
 const quoteSchema = z.object({
   number: z.string().min(1, "Required.").max(50),
@@ -33,29 +43,37 @@ const statusOptions = [
 export function QuoteForm({
   companies,
   companyId,
+  record,
 }: {
   companies?: { value: string; label: string }[];
   companyId?: string;
+  record?: QuoteRecord;
 }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      number: "",
-      status: "DRAFT" as QuoteStatus,
-      companyId: companyId ?? "",
-      expiryDate: "",
-      notes: "",
+      number: record?.number ?? "",
+      status: record?.status ?? ("DRAFT" as QuoteStatus),
+      companyId: record?.companyId ?? companyId ?? "",
+      expiryDate: toDateInputValue(record?.expiryDate),
+      notes: record?.notes ?? "",
     },
     validators: { onSubmit: quoteSchema },
     onSubmit: async ({ value }) => {
-      await createQuote({
+      const payload = {
         number: value.number,
         status: value.status,
         companyId: value.companyId,
         expiryDate: value.expiryDate ? new Date(value.expiryDate) : null,
         notes: value.notes || null,
-      });
-      successToast("Quote created successfully!");
+      };
+      if (record) {
+        await updateQuote(record.id, payload);
+        successToast("Quote updated successfully!");
+      } else {
+        await createQuote(payload);
+        successToast("Quote created successfully!");
+      }
       onSuccess?.();
     },
   });

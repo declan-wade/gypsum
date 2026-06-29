@@ -22,6 +22,7 @@ export default async function Page() {
     title: deal.title,
     value: Number(deal.value),
     stage: deal.stage,
+    companyId: deal.companyId,
     companyName: deal.company.name,
     expectedCloseDate: deal.expectedCloseDate,
   }));

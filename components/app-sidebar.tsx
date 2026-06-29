@@ -2,12 +2,14 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { LogOutIcon } from "lucide-react"
 
 import { VersionSwitcher } from "@/components/version-switcher"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -18,9 +20,18 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { navMain, versions } from "@/lib/navigation"
+import { authClient } from "@/lib/auth/client"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session } = authClient.useSession()
+
+  async function handleSignOut() {
+    await authClient.signOut()
+    router.push("/sign-in")
+    router.refresh()
+  }
 
   return (
     <Sidebar {...props}>
@@ -53,6 +64,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter>
+        {session?.user?.email && (
+          <span className="truncate px-2 text-xs text-muted-foreground">
+            {session.user.email}
+          </span>
+        )}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleSignOut}>
+              <LogOutIcon />
+              Sign out
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

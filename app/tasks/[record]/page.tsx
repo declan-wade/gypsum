@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
@@ -15,6 +15,9 @@ import {
   type TimeEntryRow,
 } from "@/app/time-tracking/columns";
 import { TimeEntryForm } from "@/app/time-tracking/forms";
+import { TaskForm } from "@/app/tasks/forms";
+import { ActivityDrawer } from "@/components/activity-drawer";
+import { getActivities } from "@/lib/activity";
 
 export default async function Page({
   params,
@@ -23,7 +26,7 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [task, users] = await Promise.all([
+  const [task, users, activities] = await Promise.all([
     prisma.task.findUnique({
       where: { id: record },
       include: {
@@ -35,6 +38,7 @@ export default async function Page({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    getActivities("Task", record),
   ]);
 
   if (!task) {
@@ -46,8 +50,11 @@ export default async function Page({
   const timeEntryRows: TimeEntryRow[] = task.timeEntries.map((entry) => ({
     id: entry.id,
     date: entry.date,
+    userId: entry.userId,
     userName: entry.user.name,
+    projectId: entry.projectId,
     projectName: task.project.name,
+    taskId: entry.taskId,
     durationMinutes: entry.durationMinutes,
     billable: entry.billable,
     description: entry.description,
@@ -73,10 +80,25 @@ export default async function Page({
     <PageLayout
       title={task.title}
       actions={
-        <Button variant="outline" nativeButton={false} render={<Link href="/tasks" />}>
-          <ArrowLeftIcon />
-          Back
-        </Button>
+        <>
+          <Button variant="outline" nativeButton={false} render={<Link href="/tasks" />}>
+            <ArrowLeftIcon />
+            Back
+          </Button>
+          <ModalButton label="Edit" icon={<PencilIcon />} variant="outline" title="Edit Task">
+            <TaskForm
+              record={{
+                id: task.id,
+                title: task.title,
+                projectId: task.projectId,
+                status: task.status,
+                dueDate: task.dueDate,
+                description: task.description,
+              }}
+            />
+          </ModalButton>
+          <ActivityDrawer activities={activities} />
+        </>
       }
     >
       <Card>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -66,15 +67,27 @@ export async function addInvoiceLineItem(
   });
 
   await recalcInvoiceTotals(invoiceId);
+  await logActivity({
+    entityType: "Invoice",
+    entityId: invoiceId,
+    action: "UPDATED",
+    summary: `Added line item: ${data.description}`,
+  });
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
 export async function deleteInvoiceLineItem(id: string) {
   const item = await prisma.invoiceLineItem.delete({
     where: { id },
-    select: { invoiceId: true },
+    select: { invoiceId: true, description: true },
   });
 
   await recalcInvoiceTotals(item.invoiceId);
+  await logActivity({
+    entityType: "Invoice",
+    entityId: item.invoiceId,
+    action: "UPDATED",
+    summary: `Removed line item: ${item.description}`,
+  });
   revalidatePath(`/invoices/${item.invoiceId}`);
 }

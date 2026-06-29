@@ -20,11 +20,13 @@ export default async function Page() {
   const data = quotes.map((quote) => ({
     id: quote.id,
     number: quote.number,
+    companyId: quote.companyId,
     companyName: quote.company.name,
     status: quote.status,
     total: Number(quote.total),
     issueDate: quote.issueDate,
     expiryDate: quote.expiryDate,
+    notes: quote.notes,
   }));
 
   const companyOptions = companies.map((c) => ({ value: c.id, label: c.name }));

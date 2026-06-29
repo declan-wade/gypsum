@@ -12,8 +12,18 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { createDeal } from "./actions";
+import { createDeal, updateDeal } from "./actions";
+import { toDateInputValue } from "@/lib/format";
 import type { DealStage } from "@prisma/client";
+
+export interface DealRecord {
+  id: string;
+  title: string;
+  value: number;
+  stage: DealStage;
+  companyId: string;
+  expectedCloseDate: Date | null;
+}
 
 const dealSchema = z.object({
   title: z.string().min(2, "Must be at least 2 characters.").max(150),
@@ -37,22 +47,24 @@ const stageOptions = [
 export function DealForm({
   companies,
   companyId,
+  record,
 }: {
   companies?: { value: string; label: string }[];
   companyId?: string;
+  record?: DealRecord;
 }) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
-      title: "",
-      value: "",
-      stage: "QUALIFICATION" as DealStage,
-      companyId: companyId ?? "",
-      expectedCloseDate: "",
+      title: record?.title ?? "",
+      value: record?.value != null ? String(record.value) : "",
+      stage: record?.stage ?? ("QUALIFICATION" as DealStage),
+      companyId: record?.companyId ?? companyId ?? "",
+      expectedCloseDate: toDateInputValue(record?.expectedCloseDate),
     },
     validators: { onSubmit: dealSchema },
     onSubmit: async ({ value }) => {
-      await createDeal({
+      const payload = {
         title: value.title,
         value: Number(value.value),
         stage: value.stage,
@@ -60,8 +72,14 @@ export function DealForm({
         expectedCloseDate: value.expectedCloseDate
           ? new Date(value.expectedCloseDate)
           : null,
-      });
-      successToast("Deal created successfully!");
+      };
+      if (record) {
+        await updateDeal(record.id, payload);
+        successToast("Deal updated successfully!");
+      } else {
+        await createDeal(payload);
+        successToast("Deal created successfully!");
+      }
       onSuccess?.();
     },
   });

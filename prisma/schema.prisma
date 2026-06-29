@@ -75,6 +75,12 @@ enum PaymentMethod {
   OTHER
 }
 
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+}
+
 // ---------- Core CRM ----------
 
 model User {
@@ -91,6 +97,23 @@ model User {
   timeEntries    TimeEntry[]
   quotes         Quote[]
   invoices       Invoice[]
+  activities     Activity[]
+}
+
+// Generic audit trail for every entity. entityType/entityId identify the
+// record; userId is nullable now (no auth yet) but ready for it later.
+model Activity {
+  id         String         @id @default(cuid())
+  entityType String
+  entityId   String
+  action     ActivityAction
+  summary    String?
+  userId     String?
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime       @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model Company {

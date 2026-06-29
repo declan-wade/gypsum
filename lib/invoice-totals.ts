@@ -30,3 +30,31 @@ export async function recalcInvoiceTotals(invoiceId: string) {
     data: { subtotal, taxAmount, total: round2(subtotal + taxAmount) },
   });
 }
+
+// Recomputes amountPaid from payments and derives PAID / PARTIAL status.
+// Leaves a VOID invoice untouched, and only auto-advances status (it won't
+// pull an unpaid invoice back from a manually-set OVERDUE etc.).
+export async function recalcInvoicePayments(invoiceId: string) {
+  const [payments, invoice] = await Promise.all([
+    prisma.payment.findMany({ where: { invoiceId }, select: { amount: true } }),
+    prisma.invoice.findUnique({ where: { id: invoiceId }, select: { total: true, status: true } }),
+  ]);
+  if (!invoice) return;
+
+  const amountPaid = round2(payments.reduce((sum, p) => sum + Number(p.amount), 0));
+  const total = Number(invoice.total);
+
+  let status = invoice.status;
+  if (status !== "VOID") {
+    if (total > 0 && amountPaid >= total) {
+      status = "PAID";
+    } else if (amountPaid > 0) {
+      status = "PARTIAL";
+    }
+  }
+
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { amountPaid, status },
+  });
+}

@@ -5,6 +5,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -36,7 +37,9 @@ export function PageLayout({ title, actions, children }: PageLayoutProps) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+          
+          {actions && <div className="ml-auto flex items-center gap-2"><ButtonGroup>{actions}</ButtonGroup></div>}
+          
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           {children}

@@ -442,3 +442,23 @@ model Payment {
 
   @@index([invoiceId])
 }
+
+model BusinessConfig {
+  id                   String  @id @default(cuid())
+  businessName         String
+  businessEmail        String
+  businessPhone        String
+  businessAddressLine1 String?
+  businessAddressLine2 String?
+  businessCity         String?
+  businessState        String?
+  businessPostcode     String?
+  abn                  String?
+  payTo                String?
+  bsb                  String?
+  accountNumber        String?
+  bankName             String?
+
+  // Physical table kept as "Setting" so renaming the model needs no DB migration.
+  @@map("Setting")
+}

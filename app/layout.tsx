@@ -5,6 +5,7 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandMenu } from "@/components/command-menu";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default async function RootLayout({
         >
           <TooltipProvider>{children}</TooltipProvider>
           <CommandMenu />
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>

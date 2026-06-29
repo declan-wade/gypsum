@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
-import { recalcInvoiceTotals } from "@/lib/invoice-totals";
+import { recalcInvoiceTotals, recalcInvoicePayments } from "@/lib/invoice-totals";
+import type { PaymentMethod } from "@prisma/client";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -33,6 +34,7 @@ export async function addInvoiceLineItem(
   });
 
   await recalcInvoiceTotals(invoiceId);
+  await recalcInvoicePayments(invoiceId);
   await logActivity({
     entityType: "Invoice",
     entityId: invoiceId,
@@ -49,6 +51,7 @@ export async function deleteInvoiceLineItem(id: string) {
   });
 
   await recalcInvoiceTotals(item.invoiceId);
+  await recalcInvoicePayments(item.invoiceId);
   await logActivity({
     entityType: "Invoice",
     entityId: item.invoiceId,
@@ -56,4 +59,51 @@ export async function deleteInvoiceLineItem(id: string) {
     summary: `Removed line item: ${item.description}`,
   });
   revalidatePath(`/invoices/${item.invoiceId}`);
+}
+
+export async function addPayment(
+  invoiceId: string,
+  data: {
+    amount: number;
+    method: PaymentMethod;
+    paidAt: Date;
+    reference: string | null;
+    notes: string | null;
+  }
+) {
+  await prisma.payment.create({
+    data: {
+      invoiceId,
+      amount: data.amount,
+      method: data.method,
+      paidAt: data.paidAt,
+      reference: data.reference,
+      notes: data.notes,
+    },
+  });
+
+  await recalcInvoicePayments(invoiceId);
+  await logActivity({
+    entityType: "Invoice",
+    entityId: invoiceId,
+    action: "UPDATED",
+    summary: `Recorded payment of ${data.amount.toFixed(2)}`,
+  });
+  revalidatePath(`/invoices/${invoiceId}`);
+}
+
+export async function deletePayment(id: string) {
+  const payment = await prisma.payment.delete({
+    where: { id },
+    select: { invoiceId: true, amount: true },
+  });
+
+  await recalcInvoicePayments(payment.invoiceId);
+  await logActivity({
+    entityType: "Invoice",
+    entityId: payment.invoiceId,
+    action: "UPDATED",
+    summary: `Removed payment of ${Number(payment.amount).toFixed(2)}`,
+  });
+  revalidatePath(`/invoices/${payment.invoiceId}`);
 }

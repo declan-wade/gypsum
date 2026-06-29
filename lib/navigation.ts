@@ -11,6 +11,7 @@ import {
   FolderKanban,
   ListChecks,
   type LucideIcon,
+  Cog,
 } from "lucide-react"
 
 export interface NavItem {
@@ -24,8 +25,6 @@ export interface NavGroup {
   url: string
   items: NavItem[]
 }
-
-export const versions = ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"]
 
 export const navMain: NavGroup[] = [
   {
@@ -55,6 +54,13 @@ export const navMain: NavGroup[] = [
       { title: "Tasks", url: "/tasks", icon: ListChecks },
       { title: "Users", url: "/users", icon: UserCog },
       { title: "Time Tracking", url: "/time-tracking", icon: Clock },
+    ],
+  },
+  {
+    title: "Configuration",
+    url: "#",
+    items: [
+      { title: "Business Config", url: "/business-config", icon: Cog },
     ],
   },
 ]

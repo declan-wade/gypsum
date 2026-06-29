@@ -13,7 +13,9 @@ import { StatusBadge } from "@/components/status-badge";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
 import { columns } from "./columns";
+import { paymentColumns } from "./payment-columns";
 import { AddLineItemForm } from "./forms";
+import { PaymentForm } from "./payment-form";
 import { InvoiceForm } from "@/app/invoices/forms";
 
 export default async function Page({
@@ -29,6 +31,7 @@ export default async function Page({
       include: {
         company: true,
         lineItems: { include: { product: true }, orderBy: { position: "asc" } },
+        payments: { orderBy: { paidAt: "desc" } },
       },
     }),
     prisma.product.findMany({
@@ -59,6 +62,16 @@ export default async function Page({
     unitPrice: Number(p.unitPrice),
   }));
 
+  const payments = invoice.payments.map((payment) => ({
+    id: payment.id,
+    paidAt: payment.paidAt,
+    amount: Number(payment.amount),
+    method: payment.method,
+    reference: payment.reference,
+  }));
+
+  const balanceDue = Number(invoice.total) - Number(invoice.amountPaid);
+
   const details: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <StatusBadge status={invoice.status} /> },
     {
@@ -78,6 +91,7 @@ export default async function Page({
     { label: "Tax", value: formatMoney(Number(invoice.taxAmount)) },
     { label: "Total", value: formatMoney(Number(invoice.total)) },
     { label: "Paid", value: formatMoney(Number(invoice.amountPaid)) },
+    { label: "Balance Due", value: formatMoney(balanceDue) },
   ];
 
   return (
@@ -129,6 +143,16 @@ export default async function Page({
           </ModalButton>
         </div>
         <DataTable columns={columns} data={lineItems} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium">Payments ({payments.length})</h2>
+          <ModalButton label="Add Payment" title="Add Payment">
+            <PaymentForm invoiceId={invoice.id} />
+          </ModalButton>
+        </div>
+        <DataTable columns={paymentColumns} data={payments} />
       </div>
     </PageLayout>
   );

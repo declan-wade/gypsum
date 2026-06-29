@@ -1,29 +1,19 @@
 import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
 import { ModalButton } from "@/components/modal";
-import { prisma } from "@/lib/prisma";
+import { listAuthUsers } from "@/lib/auth/users";
 import { columns } from "./columns";
-import { UserForm } from "./forms";
+import { AuthUserForm } from "./forms";
 
 export default async function Page() {
-  const users = await prisma.user.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  const data = users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    isActive: user.isActive,
-  }));
+  const data = await listAuthUsers();
 
   return (
     <PageLayout
       title="Users"
       actions={
         <ModalButton label="Add User" title="Add User">
-          <UserForm />
+          <AuthUserForm />
         </ModalButton>
       }
     >

@@ -22,7 +22,6 @@ import { columns as quoteColumns, type QuoteRow } from "@/app/quotes/columns"
 import { QuoteForm } from "@/app/quotes/forms"
 import { columns as invoiceColumns, type InvoiceRow } from "@/app/invoices/columns"
 import { InvoiceForm } from "@/app/invoices/forms"
-import { columns as userColumns, type UserRow } from "@/app/users/columns"
 import { columns as projectColumns, type ProjectRow } from "@/app/projects/columns"
 import { ProjectForm } from "@/app/projects/forms"
 import { StatusBadge } from "@/components/status-badge"
@@ -63,7 +62,7 @@ export default async function Page({
 }) {
   const { record } = await params
 
-  const [company, users, activities] = await Promise.all([
+  const [company, activities] = await Promise.all([
     prisma.company.findUnique({
       where: { id: record },
       include: {
@@ -73,19 +72,6 @@ export default async function Page({
         invoices: { orderBy: { createdAt: "desc" } },
         projects: { orderBy: { createdAt: "desc" } },
       },
-    }),
-    // Users connected to this company: its owner plus the owners of any of its
-    // deals, quotes, or invoices (deduplicated by the query).
-    prisma.user.findMany({
-      where: {
-        OR: [
-          { ownedCompanies: { some: { id: record } } },
-          { ownedDeals: { some: { companyId: record } } },
-          { quotes: { some: { companyId: record } } },
-          { invoices: { some: { companyId: record } } },
-        ],
-      },
-      orderBy: { name: "asc" },
     }),
     getActivities("Company", record),
   ])
@@ -124,14 +110,6 @@ export default async function Page({
     total: Number(invoice.total),
     amountPaid: Number(invoice.amountPaid),
     dueDate: invoice.dueDate,
-  }))
-
-  const userRows: UserRow[] = users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    isActive: user.isActive,
   }))
 
   const projectRows: ProjectRow[] = company.projects.map((project) => ({
@@ -261,7 +239,6 @@ export default async function Page({
           </ModalButton>
         }
       />
-      <RelatedSection title="Users" columns={userColumns} data={userRows} />
     </PageLayout>
   )
 }

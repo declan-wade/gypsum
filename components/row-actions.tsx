@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -48,20 +49,22 @@ export function RowActions({ editTitle, editForm, actions }: RowActionsProps) {
           <MoreHorizontalIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          {editForm && (
-            <DropdownMenuItem onClick={() => setOpen(true)}>Edit</DropdownMenuItem>
-          )}
-          {editForm && actions?.length ? <DropdownMenuSeparator /> : null}
-          {actions?.map((action) => (
-            <DropdownMenuItem
-              key={action.label}
-              variant={action.destructive ? "destructive" : "default"}
-              onClick={action.onSelect}
-            >
-              {action.label}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {editForm && (
+              <DropdownMenuItem onClick={() => setOpen(true)}>Edit</DropdownMenuItem>
+            )}
+            {editForm && actions?.length ? <DropdownMenuSeparator /> : null}
+            {actions?.map((action) => (
+              <DropdownMenuItem
+                key={action.label}
+                variant={action.destructive ? "destructive" : "default"}
+                onClick={action.onSelect}
+              >
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
       {editForm && (

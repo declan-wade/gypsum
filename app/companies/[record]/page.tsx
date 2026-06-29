@@ -2,7 +2,6 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeftIcon, PencilIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-
 import { PageLayout } from "@/components/page-layout"
 import { DataTable } from "@/components/data-table"
 import { ModalButton } from "@/components/modal"

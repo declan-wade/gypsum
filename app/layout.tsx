@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,11 +21,16 @@ export const metadata: Metadata = {
   description: "A simple CRM.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Opt the whole app out of static prerendering so DB-backed pages always
+  // reflect the latest data (Prisma queries don't mark a route dynamic on
+  // their own, so without this, list pages were served stale until a redeploy).
+  await connection();
+
   return (
     <html
       lang="en"

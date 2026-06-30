@@ -5,13 +5,20 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { MoreHorizontalIcon } from "lucide-react"
 
 interface PageLayoutProps {
   title: string
@@ -37,9 +44,34 @@ export function PageLayout({ title, actions, children }: PageLayoutProps) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          
-          {actions && <div className="ml-auto flex items-center gap-2"><ButtonGroup>{actions}</ButtonGroup></div>}
-          
+
+          {actions && (
+            <div className="ml-auto flex items-center gap-2">
+              <ButtonGroup className="max-[480px]:hidden">{actions}</ButtonGroup>
+              <div className="hidden max-[480px]:flex">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Open page actions"
+                      />
+                    }
+                  >
+                    <MoreHorizontalIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 [&_[data-slot=button]]:h-8 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:items-center [&_[data-slot=button]]:gap-1.5 [&_[data-slot=button]]:px-2.5 [&_[data-slot=button]]:!justify-center"
+                  >
+                    <div className="flex flex-col gap-1">{actions}</div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          )}
+
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           {children}

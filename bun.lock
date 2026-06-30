@@ -6,6 +6,8 @@
       "name": "crm-ngx",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
+        "@formepdf/core": "^0.10.4",
+        "@formepdf/react": "^0.10.4",
         "@neondatabase/auth": "^0.4.2-beta",
         "@neondatabase/neon-js": "^0.6.2-beta",
         "@prisma/adapter-pg": "^7.8.0",
@@ -170,6 +172,10 @@
     "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.8", "", { "dependencies": { "@floating-ui/dom": "^1.7.6" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-cC52bHwM/n/CxS87FH0yWdngEZrjdtLW/qVruo68qg+prK7ZQ4YGdut2GyDVpoGeAYe/h899rVeOVm6Oi40k2A=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
+
+    "@formepdf/core": ["@formepdf/core@0.10.4", "", { "dependencies": { "@formepdf/react": "0.10.4" }, "peerDependencies": { "react": "^18 || ^19" } }, "sha512-KWKTPcbAfW5VT5YAmgPWFozPHGQ8yYj8rfwFslbQBMWV1hNANEhIx77YBK4Azmc7JFiFDViwNdTItqPT5ETNKQ=="],
+
+    "@formepdf/react": ["@formepdf/react@0.10.4", "", { "peerDependencies": { "react": "^18 || ^19" } }, "sha512-3tqLHxoJEIP4ucRHDO/RgBwGjryRi1OB9OcEyUcM5bLnayGnX4ypWh0ffy/5eEgkDh4gYWEdSgwE/p+58r9Otg=="],
 
     "@hcaptcha/loader": ["@hcaptcha/loader@2.3.0", "", {}, "sha512-i4lnNxKBe+COf3R1nFZEWaZoHIoJjvDgWqvcNrdZq8ehoSNMN6KVZ56dcQ02qKie2h3+BkbkwlJA9DOIuLlK/g=="],
 

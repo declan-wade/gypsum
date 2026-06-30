@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import { formatMoney, formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
+import { RowActions } from "@/components/row-actions";
 
 export type InvoiceRow = {
   id: string;
@@ -51,5 +52,20 @@ export const columns: ColumnDef<InvoiceRow>[] = [
     accessorKey: "dueDate",
     header: "Due",
     cell: ({ row }) => formatDate(row.original.dueDate),
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => (
+      <RowActions
+        actions={[
+          {
+            label: "Download PDF",
+            onSelect: () =>
+              window.open(`/api/invoices/${row.original.id}/pdf`, "_blank"),
+          },
+        ]}
+      />
+    ),
   },
 ];

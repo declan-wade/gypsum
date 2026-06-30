@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, PencilIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon, FileTextIcon } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
@@ -102,6 +102,20 @@ export default async function Page({
           <Button variant="outline" nativeButton={false} render={<Link href="/invoices" />}>
             <ArrowLeftIcon />
             Back
+          </Button>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <a
+                href={`/api/invoices/${invoice.id}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <FileTextIcon />
+            PDF
           </Button>
           <ModalButton label="Edit" icon={<PencilIcon />} variant="outline" title="Edit Invoice">
             <InvoiceForm

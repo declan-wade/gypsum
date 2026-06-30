@@ -52,18 +52,28 @@ export const columns: ColumnDef<QuoteRow>[] = [
     id: "actions",
     header: "",
     cell: ({ row }) => (
-      <RowActions editTitle="Edit Quote" editForm={
-        <QuoteForm
-          record={{
-            id: row.original.id,
-            number: row.original.number,
-            status: row.original.status,
-            companyId: row.original.companyId,
-            expiryDate: row.original.expiryDate,
-            notes: row.original.notes,
-          }}
-        />
-      } />
+      <RowActions
+        editTitle="Edit Quote"
+        editForm={
+          <QuoteForm
+            record={{
+              id: row.original.id,
+              number: row.original.number,
+              status: row.original.status,
+              companyId: row.original.companyId,
+              expiryDate: row.original.expiryDate,
+              notes: row.original.notes,
+            }}
+          />
+        }
+        actions={[
+          {
+            label: "Download PDF",
+            onSelect: () =>
+              window.open(`/api/quotes/${row.original.id}/pdf`, "_blank"),
+          },
+        ]}
+      />
     ),
   },
 ];

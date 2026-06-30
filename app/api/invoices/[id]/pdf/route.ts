@@ -14,10 +14,14 @@ export async function GET(
     return new Response("Invoice not found", { status: 404 });
   }
 
-  return new Response(result.pdf as BodyInit, {
+  // Wrap in a Node Buffer so the runtime sends raw binary. Passing the bare
+  // Uint8Array gets the body re-encoded as text on Vercel, producing a corrupt PDF.
+  const body = Buffer.from(result.pdf);
+  return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
+      "Content-Length": String(body.byteLength),
       "Content-Disposition": `inline; filename="${result.number}.pdf"`,
     },
   });

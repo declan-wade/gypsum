@@ -17,9 +17,10 @@ export default async function proxy(request: NextRequest) {
   return neonMiddleware(request);
 }
 
-// Run on everything except the auth API, the auth pages, and static assets.
+// Run on everything except API routes (they handle their own auth and must not
+// be redirected to the HTML sign-in page), the auth pages, and static assets.
 export const config = {
   matcher: [
-    "/((?!api/auth|sign-in|sign-up|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/|sign-in|sign-up|_next/static|_next/image|favicon.ico).*)",
   ],
 };

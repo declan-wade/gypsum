@@ -458,7 +458,4 @@ model BusinessConfig {
   bsb                  String?
   accountNumber        String?
   bankName             String?
-
-  // Physical table kept as "Setting" so renaming the model needs no DB migration.
-  @@map("Setting")
 }

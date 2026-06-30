@@ -230,12 +230,17 @@ model Task {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  // Neon Auth user id of the assignee (login users, not the CRM User model).
+  // Stored as a plain id since neon_auth.user isn't a Prisma model here.
+  assigneeId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   timeEntries TimeEntry[]
 
   @@index([projectId])
+  @@index([assigneeId])
 }
 
 model TimeEntry {

@@ -18,6 +18,7 @@ import { TimeEntryForm } from "@/app/time-tracking/forms";
 import { TaskForm } from "@/app/tasks/forms";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
+import { getAuthUserOptions } from "@/lib/auth/users";
 
 export default async function Page({
   params,
@@ -26,7 +27,7 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [task, users, activities] = await Promise.all([
+  const [task, users, authUsers, activities] = await Promise.all([
     prisma.task.findUnique({
       where: { id: record },
       include: {
@@ -38,6 +39,7 @@ export default async function Page({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    getAuthUserOptions(),
     getActivities("Task", record),
   ]);
 
@@ -46,6 +48,9 @@ export default async function Page({
   }
 
   const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const assigneeName = task.assigneeId
+    ? authUsers.nameById.get(task.assigneeId) ?? null
+    : null;
 
   const timeEntryRows: TimeEntryRow[] = task.timeEntries.map((entry) => ({
     id: entry.id,
@@ -73,6 +78,7 @@ export default async function Page({
         </Link>
       ),
     },
+    { label: "Assignee", value: assigneeName ?? "Unassigned" },
     { label: "Due", value: formatDate(task.dueDate) },
   ];
 
@@ -94,7 +100,9 @@ export default async function Page({
                 status: task.status,
                 dueDate: task.dueDate,
                 description: task.description,
+                assigneeId: task.assigneeId,
               }}
+              assignees={authUsers.options}
             />
           </ModalButton>
           <ActivityDrawer activities={activities} />

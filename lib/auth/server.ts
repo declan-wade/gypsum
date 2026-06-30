@@ -9,3 +9,13 @@ export const auth = createNeonAuth({
     secret: process.env.NEON_AUTH_COOKIE_SECRET!,
   },
 });
+
+// The signed-in Neon Auth user's id (or null), for request-time server code.
+export async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { data } = await auth.getSession();
+    return data?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}

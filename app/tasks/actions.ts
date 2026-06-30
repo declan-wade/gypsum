@@ -11,6 +11,7 @@ export async function createTask(data: {
   status: TaskStatus;
   dueDate: Date | null;
   projectId: string;
+  assigneeId: string | null;
 }) {
   const task = await prisma.task.create({
     data: {
@@ -19,6 +20,7 @@ export async function createTask(data: {
       status: data.status,
       dueDate: data.dueDate,
       projectId: data.projectId,
+      assigneeId: data.assigneeId,
     },
   });
   await logActivity({
@@ -38,6 +40,7 @@ export async function updateTask(
     status: TaskStatus;
     dueDate: Date | null;
     projectId: string;
+    assigneeId: string | null;
   }
 ) {
   const task = await prisma.task.update({
@@ -48,6 +51,7 @@ export async function updateTask(
       status: data.status,
       dueDate: data.dueDate,
       projectId: data.projectId,
+      assigneeId: data.assigneeId,
     },
   });
   await logActivity({

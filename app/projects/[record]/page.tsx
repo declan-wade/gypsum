@@ -16,6 +16,7 @@ import {
 } from "@/app/time-tracking/columns";
 import { columns as taskColumns, type TaskRow } from "@/app/tasks/columns";
 import { TaskForm } from "@/app/tasks/forms";
+import { getAuthUserOptions } from "@/lib/auth/users";
 import { TimeEntryForm } from "@/app/time-tracking/forms";
 import { ProjectForm } from "@/app/projects/forms";
 import { StatusBadge } from "@/components/status-badge";
@@ -54,7 +55,7 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [project, users, activities] = await Promise.all([
+  const [project, users, authUsers, activities] = await Promise.all([
     prisma.project.findUnique({
       where: { id: record },
       include: {
@@ -67,6 +68,7 @@ export default async function Page({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    getAuthUserOptions(),
     getActivities("Project", record),
   ]);
 
@@ -80,6 +82,7 @@ export default async function Page({
     id: task.id,
     title: task.title,
     projectName: project.name,
+    assigneeName: task.assigneeId ? authUsers.nameById.get(task.assigneeId) ?? null : null,
     status: task.status,
     dueDate: task.dueDate,
   }));
@@ -178,7 +181,7 @@ export default async function Page({
         data={taskRows}
         action={
           <ModalButton label="Add Task" title="Add Task">
-            <TaskForm projectId={project.id} />
+            <TaskForm projectId={project.id} assignees={authUsers.options} />
           </ModalButton>
         }
       />

@@ -23,3 +23,15 @@ export async function listAuthUsers(): Promise<AuthUser[]> {
      ORDER BY "createdAt" DESC`
   );
 }
+
+// Convenience for task assignment: select options + an id→name lookup.
+export async function getAuthUserOptions(): Promise<{
+  options: { value: string; label: string }[];
+  nameById: Map<string, string>;
+}> {
+  const users = await listAuthUsers();
+  return {
+    options: users.map((u) => ({ value: u.id, label: u.name })),
+    nameById: new Map(users.map((u) => [u.id, u.name])),
+  };
+}

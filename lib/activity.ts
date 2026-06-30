@@ -19,6 +19,24 @@ export async function getActivities(entityType: string, entityId: string) {
   }));
 }
 
+// The most recent audit-trail entries across all entities, for the Activity page.
+export async function getRecentActivities(limit = 100) {
+  const activities = await prisma.activity.findMany({
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return activities.map((a) => ({
+    id: a.id,
+    entityType: a.entityType,
+    entityId: a.entityId,
+    action: a.action,
+    summary: a.summary,
+    userName: a.user?.name ?? null,
+    createdAt: a.createdAt,
+  }));
+}
+
 export async function logActivity(params: {
   entityType: string;
   entityId: string;

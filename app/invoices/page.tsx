@@ -2,10 +2,14 @@ import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
 import { ModalButton } from "@/components/modal";
 import { prisma } from "@/lib/prisma";
+import { markOverdueInvoices } from "@/lib/invoice-ar";
 import { columns } from "./columns";
 import { InvoiceForm } from "./forms";
 
 export default async function Page() {
+  // Keep statuses current on view; the daily cron is the scheduled backstop.
+  await markOverdueInvoices();
+
   const [invoices, companies] = await Promise.all([
     prisma.invoice.findMany({
       include: { company: true },

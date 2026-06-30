@@ -22,6 +22,7 @@ export interface TaskRecord {
   status: TaskStatus;
   dueDate: Date | null;
   description: string | null;
+  assigneeId: string | null;
 }
 
 const taskSchema = z.object({
@@ -30,6 +31,7 @@ const taskSchema = z.object({
   status: z.enum(["TODO", "IN_PROGRESS", "DONE"]),
   dueDate: z.string(),
   description: z.string(),
+  assigneeId: z.string(),
 });
 
 const statusOptions = [
@@ -42,10 +44,12 @@ interface TaskFormProps {
   // List page passes selectable projects; the project detail page passes a fixed id.
   projects?: { value: string; label: string }[];
   projectId?: string;
+  // Auth users (login accounts) to assign the task to. Omitted on row edit.
+  assignees?: { value: string; label: string }[];
   record?: TaskRecord;
 }
 
-export function TaskForm({ projects, projectId, record }: TaskFormProps) {
+export function TaskForm({ projects, projectId, assignees, record }: TaskFormProps) {
   const onSuccess = useModalSuccess();
   const form = useForm({
     defaultValues: {
@@ -54,6 +58,7 @@ export function TaskForm({ projects, projectId, record }: TaskFormProps) {
       status: record?.status ?? ("TODO" as TaskStatus),
       dueDate: toDateInputValue(record?.dueDate),
       description: record?.description ?? "",
+      assigneeId: record?.assigneeId ?? "",
     },
     validators: { onSubmit: taskSchema },
     onSubmit: async ({ value }) => {
@@ -63,6 +68,7 @@ export function TaskForm({ projects, projectId, record }: TaskFormProps) {
         status: value.status,
         dueDate: value.dueDate ? new Date(value.dueDate) : null,
         description: value.description || null,
+        assigneeId: value.assigneeId || null,
       };
       if (record) {
         await updateTask(record.id, payload);
@@ -90,6 +96,13 @@ export function TaskForm({ projects, projectId, record }: TaskFormProps) {
           <form.Field name="projectId">
             {(field) => (
               <FormSelectField field={field} label="Project" placeholder="Select a project" options={projects} />
+            )}
+          </form.Field>
+        )}
+        {assignees && (
+          <form.Field name="assigneeId">
+            {(field) => (
+              <FormSelectField field={field} label="Assignee" placeholder="Unassigned" options={assignees} />
             )}
           </form.Field>
         )}

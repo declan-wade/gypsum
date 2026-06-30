@@ -2,6 +2,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
+import { getArAging } from "@/lib/invoice-ar";
 
 export default async function Page() {
   const [
@@ -12,6 +13,7 @@ export default async function Page() {
     invoiceTotals,
     activeProjects,
     openTasks,
+    aging,
   ] = await Promise.all([
     prisma.company.count(),
     prisma.contact.count(),
@@ -26,6 +28,7 @@ export default async function Page() {
     }),
     prisma.project.count({ where: { status: "ACTIVE" } }),
     prisma.task.count({ where: { status: { not: "DONE" } } }),
+    getArAging(),
   ]);
 
   const pipelineValue = Number(pipeline._sum.value ?? 0);
@@ -43,6 +46,8 @@ export default async function Page() {
     { label: "Open Tasks", value: openTasks },
   ];
 
+  const totalOutstanding = aging.reduce((sum, b) => sum + b.amount, 0);
+
   return (
     <PageLayout title="Dashboard">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -54,6 +59,30 @@ export default async function Page() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-medium">Accounts Receivable — Aging</h2>
+          <span className="text-sm text-muted-foreground">
+            {formatMoney(totalOutstanding)} outstanding
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          {aging.map((bucket) => (
+            <Card key={bucket.label}>
+              <CardContent className="flex flex-col gap-1">
+                <span className="text-sm text-muted-foreground">{bucket.label}</span>
+                <span className="text-3xl font-bold tracking-tight">
+                  {formatMoney(bucket.amount)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {bucket.count} invoice{bucket.count === 1 ? "" : "s"}
+                </span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </PageLayout>
   );

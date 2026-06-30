@@ -9,9 +9,12 @@ import {
   UserCog,
   Clock,
   FolderKanban,
+  Activity,
   ListChecks,
   type LucideIcon,
   Cog,
+  House,
+  CircleCheckBig,
 } from "lucide-react"
 
 export interface NavItem {
@@ -27,6 +30,15 @@ export interface NavGroup {
 }
 
 export const navMain: NavGroup[] = [
+  {
+    title: "Home",
+    url: "#",
+    items: [
+      { title: "Dashboard", url: "/", icon: House },
+      { title: "My Tasks", url: "/my-tasks", icon: CircleCheckBig },
+      { title: "Activity", url: "/activities", icon: Activity },
+    ],
+  },
   {
     title: "Clients",
     url: "#",

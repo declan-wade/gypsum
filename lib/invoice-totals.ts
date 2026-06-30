@@ -37,19 +37,24 @@ export async function recalcInvoiceTotals(invoiceId: string) {
 export async function recalcInvoicePayments(invoiceId: string) {
   const [payments, invoice] = await Promise.all([
     prisma.payment.findMany({ where: { invoiceId }, select: { amount: true } }),
-    prisma.invoice.findUnique({ where: { id: invoiceId }, select: { total: true, status: true } }),
+    prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { total: true, status: true, dueDate: true },
+    }),
   ]);
   if (!invoice) return;
 
   const amountPaid = round2(payments.reduce((sum, p) => sum + Number(p.amount), 0));
   const total = Number(invoice.total);
+  const pastDue = invoice.dueDate ? new Date(invoice.dueDate).getTime() < Date.now() : false;
 
   let status = invoice.status;
   if (status !== "VOID") {
     if (total > 0 && amountPaid >= total) {
       status = "PAID";
     } else if (amountPaid > 0) {
-      status = "PARTIAL";
+      // A partially-paid invoice that's past due stays OVERDUE.
+      status = pastDue ? "OVERDUE" : "PARTIAL";
     }
   }
 

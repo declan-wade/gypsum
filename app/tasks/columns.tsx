@@ -9,6 +9,7 @@ export type TaskRow = {
   id: string;
   title: string;
   projectName: string;
+  assigneeName: string | null;
   status: string;
   dueDate: Date | null;
 };
@@ -29,6 +30,11 @@ export const columns: ColumnDef<TaskRow>[] = [
   {
     accessorKey: "projectName",
     header: "Project",
+  },
+  {
+    accessorKey: "assigneeName",
+    header: "Assignee",
+    cell: ({ row }) => row.original.assigneeName ?? "Unassigned",
   },
   {
     accessorKey: "status",

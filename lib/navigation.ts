@@ -75,7 +75,7 @@ export const navMain: NavGroup[] = [
     url: "#",
     items: [
       { title: "Business Config", url: "/business-config", icon: Cog },
-       { title: "Settings", url: "/settings", icon: TowerControl },
+      { title: "Settings", url: "/settings", icon: TowerControl },
     ],
   },
 ]

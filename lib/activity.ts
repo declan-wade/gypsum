@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/auth/server";
 import type { ActivityAction } from "@prisma/client";
 
-// Records an audit-trail entry. `userId` is accepted now so call sites are ready
-// for auth; until then it defaults to null ("System").
 // Fetches an entity's audit trail as plain, client-serializable objects.
 export async function getActivities(entityType: string, entityId: string) {
   const activities = await prisma.activity.findMany({
@@ -37,6 +36,9 @@ export async function getRecentActivities(limit = 100) {
   }));
 }
 
+// Records an audit-trail entry. By default the entry is attributed to the
+// currently signed-in user; pass `userId` explicitly to attribute it to someone
+// else, or `userId: null` to force a "System" entry (e.g. from cron jobs).
 export async function logActivity(params: {
   entityType: string;
   entityId: string;
@@ -44,13 +46,16 @@ export async function logActivity(params: {
   summary?: string;
   userId?: string | null;
 }) {
+  const userId =
+    params.userId !== undefined ? params.userId : await getCurrentUserId();
+
   await prisma.activity.create({
     data: {
       entityType: params.entityType,
       entityId: params.entityId,
       action: params.action,
       summary: params.summary ?? null,
-      userId: params.userId ?? null,
+      userId: userId ?? null,
     },
   });
 }

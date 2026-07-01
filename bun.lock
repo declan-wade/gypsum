@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "crm-ngx",
+      "name": "gypsum",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
         "@formepdf/core": "^0.10.4",

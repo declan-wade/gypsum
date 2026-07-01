@@ -17,7 +17,7 @@ const domain = process.env.RESEND_DOMAIN;
 // Instantiate lazily so a missing key degrades gracefully instead of throwing
 // at import time (e.g. in local dev without Resend configured).
 const resend = apiKey ? new Resend(apiKey) : null;
-const FROM = domain ? `CRM NGX <notifications@${domain}>` : null;
+const FROM = domain ? `Gypsum <notifications@${domain}>` : null;
 
 interface Recipient {
   id: string;
@@ -119,7 +119,7 @@ export async function notifyTaskAssigned(params: {
   await sendEmail({
     to: recipient.email,
     subject: `Task assigned to you: ${params.title}`,
-    text: `Hi ${recipient.name},\n\nYou've been assigned a task: ${params.title}${project}${due}\n\n— CRM NGX`,
+    text: `Hi ${recipient.name},\n\nYou've been assigned a task: ${params.title}${project}${due}\n\n— Gypsum`,
   });
 }
 
@@ -140,7 +140,7 @@ export async function notifyInvoiceSent(params: {
       sendEmail({
         to: r.email,
         subject: `Invoice ${params.number} sent`,
-        text: `Hi ${r.name},\n\nInvoice ${params.number}${total} has been sent${company}.\n\n— CRM NGX`,
+        text: `Hi ${r.name},\n\nInvoice ${params.number}${total} has been sent${company}.\n\n— Gypsum`,
       })
     )
   );
@@ -167,7 +167,7 @@ export async function notifyTaskDueSoon(params: {
       params.tasks.length === 1
         ? `Task due soon: ${params.tasks[0].title}`
         : `${params.tasks.length} tasks due soon`,
-    text: `Hi ${recipient.name},\n\nThe following tasks are due soon:\n\n${lines}\n\n— CRM NGX`,
+    text: `Hi ${recipient.name},\n\nThe following tasks are due soon:\n\n${lines}\n\n— Gypsum`,
   });
 }
 
@@ -194,7 +194,7 @@ export async function notifyInvoicesOverdue(
           invoices.length === 1
             ? `Invoice ${invoices[0].number} is overdue`
             : `${invoices.length} invoices are overdue`,
-        text: `Hi ${r.name},\n\nThe following invoices are now overdue:\n\n${lines}\n\n— CRM NGX`,
+        text: `Hi ${r.name},\n\nThe following invoices are now overdue:\n\n${lines}\n\n— Gypsum`,
       })
     )
   );

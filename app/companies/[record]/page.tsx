@@ -44,13 +44,10 @@ function RelatedSection<T>({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">
-          {title} ({data.length})
-        </h2>
-        {action}
-      </div>
-      <DataTable columns={columns} data={data} />
+      <h2 className="text-sm font-medium">
+        {title} ({data.length})
+      </h2>
+      <DataTable columns={columns} data={data} action={action} />
     </div>
   )
 }

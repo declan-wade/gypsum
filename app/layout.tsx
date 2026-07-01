@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CRM NGX",
+  title: "Gypsum",
   description: "A simple CRM.",
 };
 

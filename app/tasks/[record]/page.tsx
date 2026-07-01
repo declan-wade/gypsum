@@ -132,13 +132,16 @@ export default async function Page({
       </Card>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Time Entries ({timeEntryRows.length})</h2>
-          <ModalButton label="Add Time Entry" title="Add Time Entry">
-            <TimeEntryForm users={userOptions} projectId={task.projectId} taskId={task.id} />
-          </ModalButton>
-        </div>
-        <DataTable columns={timeEntryColumns} data={timeEntryRows} />
+        <h2 className="text-sm font-medium">Time Entries ({timeEntryRows.length})</h2>
+        <DataTable
+          columns={timeEntryColumns}
+          data={timeEntryRows}
+          action={
+            <ModalButton label="Add Time Entry" title="Add Time Entry">
+              <TimeEntryForm users={userOptions} projectId={task.projectId} taskId={task.id} />
+            </ModalButton>
+          }
+        />
       </div>
     </PageLayout>
   );

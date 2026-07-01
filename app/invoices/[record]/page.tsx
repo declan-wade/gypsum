@@ -150,23 +150,29 @@ export default async function Page({
       </Card>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Line Items ({lineItems.length})</h2>
-          <ModalButton label="Add Line Item" title="Add Line Item">
-            <AddLineItemForm invoiceId={invoice.id} products={productOptions} />
-          </ModalButton>
-        </div>
-        <DataTable columns={columns} data={lineItems} />
+        <h2 className="text-sm font-medium">Line Items ({lineItems.length})</h2>
+        <DataTable
+          columns={columns}
+          data={lineItems}
+          action={
+            <ModalButton label="Add Line Item" title="Add Line Item">
+              <AddLineItemForm invoiceId={invoice.id} products={productOptions} />
+            </ModalButton>
+          }
+        />
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Payments ({payments.length})</h2>
-          <ModalButton label="Add Payment" title="Add Payment">
-            <PaymentForm invoiceId={invoice.id} />
-          </ModalButton>
-        </div>
-        <DataTable columns={paymentColumns} data={payments} />
+        <h2 className="text-sm font-medium">Payments ({payments.length})</h2>
+        <DataTable
+          columns={paymentColumns}
+          data={payments}
+          action={
+            <ModalButton label="Add Payment" title="Add Payment">
+              <PaymentForm invoiceId={invoice.id} />
+            </ModalButton>
+          }
+        />
       </div>
     </PageLayout>
   );

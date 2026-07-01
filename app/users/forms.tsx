@@ -23,11 +23,28 @@ const statusOptions = [
   { value: "inactive", label: "Inactive" },
 ];
 
+// Sentinel for "no company" — a client user links to a company, staff accounts
+// don't. The base-ui Select can't hold an empty-string value, so we use this.
+const NO_COMPANY = "none";
+
+interface CompanyOption {
+  value: string;
+  label: string;
+}
+
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-export function AuthUserForm({ record }: { record?: AuthUser }) {
+export function AuthUserForm({
+  record,
+  companies = [],
+}: {
+  record?: AuthUser;
+  companies?: CompanyOption[];
+}) {
   const onSuccess = useModalSuccess();
   const isEdit = !!record;
+
+  const companyOptions = [{ value: NO_COMPANY, label: "No company (staff)" }, ...companies];
 
   // One schema for both modes; create requires email + password, edit treats
   // password as an optional reset (blank = unchanged).
@@ -38,6 +55,7 @@ export function AuthUserForm({ record }: { record?: AuthUser }) {
       password: z.string(),
       role: z.enum(["user", "admin"]),
       status: z.enum(["active", "inactive"]),
+      companyId: z.string(),
     })
     .superRefine((val, ctx) => {
       if (!isEdit && !EMAIL_RE.test(val.email)) {
@@ -58,14 +76,17 @@ export function AuthUserForm({ record }: { record?: AuthUser }) {
       password: "",
       role: (record?.role === "admin" ? "admin" : "user") as "user" | "admin",
       status: record?.banned ? "inactive" : "active",
+      companyId: record?.companyId ?? NO_COMPANY,
     },
     validators: { onSubmit: userSchema },
     onSubmit: async ({ value }) => {
+      const companyId = value.companyId === NO_COMPANY ? null : value.companyId;
       if (record) {
         await updateAuthUser(record.id, {
           name: value.name,
           role: value.role,
           active: value.status === "active",
+          companyId,
         });
         if (value.password) {
           await resetAuthUserPassword(record.id, value.password);
@@ -77,6 +98,7 @@ export function AuthUserForm({ record }: { record?: AuthUser }) {
           email: value.email,
           password: value.password,
           role: value.role,
+          companyId,
         });
         successToast("User created successfully!");
       }
@@ -113,6 +135,16 @@ export function AuthUserForm({ record }: { record?: AuthUser }) {
         <form.Field name="role">
           {(field) => (
             <FormSelectField field={field} label="Role" placeholder="Select a role" options={roleOptions} />
+          )}
+        </form.Field>
+        <form.Field name="companyId">
+          {(field) => (
+            <FormSelectField
+              field={field}
+              label="Company"
+              placeholder="Select a company"
+              options={companyOptions}
+            />
           )}
         </form.Field>
         {isEdit && (

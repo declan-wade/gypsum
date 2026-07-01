@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 // A login account from Neon Auth's `neon_auth.user` table (better-auth schema).
 // This is distinct from the CRM `User` model used for record ownership.
+// companyId/companyName come from the CRM-owned `PortalUser` link (client portal
+// access); they're null for staff accounts that aren't tied to a company.
 export interface AuthUser {
   id: string;
   name: string;
@@ -10,17 +12,23 @@ export interface AuthUser {
   banned: boolean;
   emailVerified: boolean;
   createdAt: Date;
+  companyId: string | null;
+  companyName: string | null;
 }
 
 export async function listAuthUsers(): Promise<AuthUser[]> {
   return prisma.$queryRawUnsafe<AuthUser[]>(
-    `SELECT id, name, email,
-            COALESCE(role, 'user') AS role,
-            COALESCE(banned, false) AS banned,
-            "emailVerified",
-            "createdAt"
-     FROM neon_auth."user"
-     ORDER BY "createdAt" DESC`
+    `SELECT u.id, u.name, u.email,
+            COALESCE(u.role, 'user') AS role,
+            COALESCE(u.banned, false) AS banned,
+            u."emailVerified",
+            u."createdAt",
+            pu."companyId" AS "companyId",
+            c.name AS "companyName"
+     FROM neon_auth."user" u
+     LEFT JOIN public."PortalUser" pu ON pu."authUserId" = u.id::text
+     LEFT JOIN public."Company" c ON c.id = pu."companyId"
+     ORDER BY u."createdAt" DESC`
   );
 }
 

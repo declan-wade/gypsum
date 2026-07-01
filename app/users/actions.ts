@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // These manage Neon Auth login accounts directly against the `neon_auth` schema
@@ -14,12 +15,14 @@ export async function createAuthUser(data: {
   email: string;
   password: string;
   role: string;
+  // Optional client-portal company link (null = staff account, no portal company).
+  companyId?: string | null;
 }) {
   const userId = randomUUID();
   const accountRowId = randomUUID();
   const passwordHash = await hashPassword(data.password);
 
-  await prisma.$transaction([
+  const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.$executeRawUnsafe(
       `INSERT INTO neon_auth."user" (id, name, email, "emailVerified", role, banned, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, true, $4, false, now(), now())`,
@@ -37,12 +40,22 @@ export async function createAuthUser(data: {
       userId,
       passwordHash
     ),
-  ]);
+  ];
+
+  if (data.companyId) {
+    ops.push(
+      prisma.portalUser.create({
+        data: { authUserId: userId, companyId: data.companyId },
+      })
+    );
+  }
+
+  await prisma.$transaction(ops);
 }
 
 export async function updateAuthUser(
   id: string,
-  data: { name: string; role: string; active: boolean }
+  data: { name: string; role: string; active: boolean; companyId?: string | null }
 ) {
   await prisma.$executeRawUnsafe(
     `UPDATE neon_auth."user"
@@ -53,6 +66,17 @@ export async function updateAuthUser(
     !data.active,
     id
   );
+
+  // Sync the client-portal company link: a company id upserts it, null clears it.
+  if (data.companyId) {
+    await prisma.portalUser.upsert({
+      where: { authUserId: id },
+      create: { authUserId: id, companyId: data.companyId },
+      update: { companyId: data.companyId },
+    });
+  } else {
+    await prisma.portalUser.deleteMany({ where: { authUserId: id } });
+  }
 }
 
 export async function resetAuthUserPassword(id: string, password: string) {

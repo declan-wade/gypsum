@@ -2,9 +2,16 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FieldApi = import("@tanstack/react-form").FieldApi<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>
-import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -140,6 +147,30 @@ export function FormSelectField({ field, label, placeholder, options, onValueCha
         </SelectContent>
       </Select>
       {isInvalid && <FieldError errors={field.state.meta.errors} />}
+    </Field>
+  )
+}
+
+interface SwitchFieldProps {
+  field: FieldApi
+  label: string
+  description?: string
+}
+
+export function FormSwitchField({ field, label, description }: SwitchFieldProps) {
+  return (
+    <Field orientation="horizontal">
+      <FieldContent>
+        <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+        {description && <FieldDescription>{description}</FieldDescription>}
+      </FieldContent>
+      <Switch
+        id={field.name}
+        name={field.name}
+        checked={field.state.value as boolean}
+        onCheckedChange={(checked) => field.handleChange(checked)}
+        onBlur={field.handleBlur}
+      />
     </Field>
   )
 }

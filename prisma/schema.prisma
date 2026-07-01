@@ -234,6 +234,10 @@ model Task {
   // Stored as a plain id since neon_auth.user isn't a Prisma model here.
   assigneeId String?
 
+  // Set when a "due soon" reminder email has been sent, so the reminder cron
+  // notifies each task at most once.
+  dueSoonNotifiedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -463,4 +467,22 @@ model BusinessConfig {
   bsb                  String?
   accountNumber        String?
   bankName             String?
+}
+
+// Per-user email notification preferences. Keyed by the Neon Auth user id
+// (neon_auth.user, not the CRM User model) — same convention as Task.assigneeId.
+model NotificationSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Task/todo emails
+  taskAssigned Boolean @default(true)
+  taskDueSoon  Boolean @default(true)
+
+  // Invoice emails
+  invoiceSent    Boolean @default(true)
+  invoiceOverdue Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

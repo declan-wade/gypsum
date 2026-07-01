@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { notifyTaskAssigned } from "@/lib/email";
 import type { TaskStatus } from "@prisma/client";
 
 export async function createTask(data: {
@@ -22,6 +23,7 @@ export async function createTask(data: {
       projectId: data.projectId,
       assigneeId: data.assigneeId,
     },
+    include: { project: { select: { name: true } } },
   });
   await logActivity({
     entityType: "Task",
@@ -29,6 +31,14 @@ export async function createTask(data: {
     action: "CREATED",
     summary: `Created task ${task.title}`,
   });
+  if (task.assigneeId) {
+    await notifyTaskAssigned({
+      assigneeId: task.assigneeId,
+      title: task.title,
+      dueDate: task.dueDate,
+      projectName: task.project.name,
+    });
+  }
   revalidatePath(`/projects/${data.projectId}`);
 }
 
@@ -43,6 +53,11 @@ export async function updateTask(
     assigneeId: string | null;
   }
 ) {
+  const previous = await prisma.task.findUnique({
+    where: { id },
+    select: { assigneeId: true },
+  });
+
   const task = await prisma.task.update({
     where: { id },
     data: {
@@ -53,6 +68,7 @@ export async function updateTask(
       projectId: data.projectId,
       assigneeId: data.assigneeId,
     },
+    include: { project: { select: { name: true } } },
   });
   await logActivity({
     entityType: "Task",
@@ -60,5 +76,14 @@ export async function updateTask(
     action: "UPDATED",
     summary: `Updated task ${task.title}`,
   });
+  // Only notify when the assignee actually changes to a new person.
+  if (task.assigneeId && task.assigneeId !== previous?.assigneeId) {
+    await notifyTaskAssigned({
+      assigneeId: task.assigneeId,
+      title: task.title,
+      dueDate: task.dueDate,
+      projectName: task.project.name,
+    });
+  }
   revalidatePath(`/projects/${data.projectId}`);
 }

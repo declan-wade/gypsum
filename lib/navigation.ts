@@ -15,6 +15,7 @@ import {
   Cog,
   House,
   CircleCheckBig,
+  Settings,
 } from "lucide-react"
 
 export interface NavItem {
@@ -73,6 +74,13 @@ export const navMain: NavGroup[] = [
     url: "#",
     items: [
       { title: "Business Config", url: "/business-config", icon: Cog },
+    ],
+  },
+  {
+    title: "Settings",
+    url: "#",
+    items: [
+      { title: "Notifications", url: "/settings", icon: Settings },
     ],
   },
 ]

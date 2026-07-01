@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { notifyInvoiceSent } from "@/lib/email";
+import { formatMoney } from "@/lib/format";
 import type { InvoiceStatus } from "@prisma/client";
 
 export async function createInvoice(data: {
@@ -19,6 +21,7 @@ export async function createInvoice(data: {
       dueDate: data.dueDate,
       notes: data.notes,
     },
+    include: { company: { select: { name: true } } },
   });
   await logActivity({
     entityType: "Invoice",
@@ -26,6 +29,13 @@ export async function createInvoice(data: {
     action: "CREATED",
     summary: `Created invoice ${invoice.number}`,
   });
+  if (invoice.status === "SENT") {
+    await notifyInvoiceSent({
+      number: invoice.number,
+      companyName: invoice.company.name,
+      total: formatMoney(invoice.total.toString()),
+    });
+  }
 }
 
 export async function updateInvoice(
@@ -38,6 +48,11 @@ export async function updateInvoice(
     notes: string | null;
   }
 ) {
+  const previous = await prisma.invoice.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+
   const invoice = await prisma.invoice.update({
     where: { id },
     data: {
@@ -47,6 +62,7 @@ export async function updateInvoice(
       dueDate: data.dueDate,
       notes: data.notes,
     },
+    include: { company: { select: { name: true } } },
   });
   await logActivity({
     entityType: "Invoice",
@@ -54,4 +70,12 @@ export async function updateInvoice(
     action: "UPDATED",
     summary: `Updated invoice ${invoice.number}`,
   });
+  // Only notify on the transition into SENT, not on every save of a sent invoice.
+  if (invoice.status === "SENT" && previous?.status !== "SENT") {
+    await notifyInvoiceSent({
+      number: invoice.number,
+      companyName: invoice.company.name,
+      total: formatMoney(invoice.total.toString()),
+    });
+  }
 }

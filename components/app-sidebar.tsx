@@ -14,6 +14,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -21,7 +22,12 @@ import {
 import { navMain } from "@/lib/navigation"
 import { authClient } from "@/lib/auth/client"
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  /** Count badges keyed by nav item url, e.g. { "/my-tasks": 3 }. */
+  badges?: Record<string, number>
+}
+
+export function AppSidebar({ badges = {}, ...props }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = authClient.useSession()
@@ -60,6 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {group.items.map((item) => {
                   const isActive =
                     pathname === item.url || pathname.startsWith(`${item.url}/`)
+                  const badge = badges[item.url]
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
@@ -69,6 +76,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <item.icon />
                         {item.title}
                       </SidebarMenuButton>
+                      {badge ? (
+                        <SidebarMenuBadge className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                          {badge > 99 ? "99+" : badge}
+                        </SidebarMenuBadge>
+                      ) : null}
                     </SidebarMenuItem>
                   )
                 })}

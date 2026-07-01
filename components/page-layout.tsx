@@ -19,6 +19,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { MoreHorizontalIcon } from "lucide-react"
+import { prisma } from "@/lib/prisma"
+import { getCurrentUserId } from "@/lib/auth/server"
 
 interface PageLayoutProps {
   title: string
@@ -26,10 +28,28 @@ interface PageLayoutProps {
   children: React.ReactNode
 }
 
-export function PageLayout({ title, actions, children }: PageLayoutProps) {
+export async function PageLayout({ title, actions, children }: PageLayoutProps) {
+  const userId = await getCurrentUserId()
+
+  const [incompleteTasks, unpaidInvoices] = await Promise.all([
+    userId
+      ? prisma.task.count({
+          where: { assigneeId: userId, status: { not: "DONE" } },
+        })
+      : Promise.resolve(0),
+    prisma.invoice.count({
+      where: { status: { notIn: ["PAID", "VOID"] } },
+    }),
+  ])
+
+  const badges = {
+    "/my-tasks": incompleteTasks,
+    "/invoices": unpaidInvoices,
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar badges={badges} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

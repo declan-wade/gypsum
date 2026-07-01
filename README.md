@@ -1,3 +1,7 @@
+<img width="90" height="90" alt="Icon-iOS-Default-256x256@1x" src="https://github.com/user-attachments/assets/ec5e1c3b-bee2-4b97-991d-32e23537960b" />
+
+# Gypsum
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

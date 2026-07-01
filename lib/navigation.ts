@@ -1,3 +1,4 @@
+import { SliderControl } from "@base-ui/react"
 import {
   Building2,
   Users,
@@ -15,7 +16,7 @@ import {
   Cog,
   House,
   CircleCheckBig,
-  Settings,
+  TowerControl,
 } from "lucide-react"
 
 export interface NavItem {
@@ -74,13 +75,7 @@ export const navMain: NavGroup[] = [
     url: "#",
     items: [
       { title: "Business Config", url: "/business-config", icon: Cog },
-    ],
-  },
-  {
-    title: "Settings",
-    url: "#",
-    items: [
-      { title: "Notifications", url: "/settings", icon: Settings },
+       { title: "Settings", url: "/settings", icon: TowerControl },
     ],
   },
 ]

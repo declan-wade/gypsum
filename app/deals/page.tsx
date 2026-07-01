@@ -1,9 +1,8 @@
 import { PageLayout } from "@/components/page-layout";
-import { DataTable } from "@/components/data-table";
 import { ModalButton } from "@/components/modal";
 import { prisma } from "@/lib/prisma";
-import { columns } from "./columns";
 import { DealForm } from "./forms";
+import { DealsView } from "./deals-view";
 
 export default async function Page() {
   const [deals, companies] = await Promise.all([
@@ -38,7 +37,7 @@ export default async function Page() {
         </ModalButton>
       }
     >
-      <DataTable columns={columns} data={data} />
+      <DealsView data={data} />
     </PageLayout>
   );
 }

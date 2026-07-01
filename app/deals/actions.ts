@@ -28,6 +28,19 @@ export async function createDeal(data: {
   });
 }
 
+export async function updateDealStage(id: string, stage: DealStage) {
+  const deal = await prisma.deal.update({
+    where: { id },
+    data: { stage },
+  });
+  await logActivity({
+    entityType: "Deal",
+    entityId: id,
+    action: "UPDATED",
+    summary: `Moved deal ${deal.title} to ${stage}`,
+  });
+}
+
 export async function updateDeal(
   id: string,
   data: {

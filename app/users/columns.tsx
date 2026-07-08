@@ -14,7 +14,10 @@ interface CompanyOption {
 
 // A factory so each row's edit form can be handed the company options
 // (columns are static, but the company dropdown needs the fetched list).
-export function getColumns(companies: CompanyOption[]): ColumnDef<AuthUser>[] {
+export function getColumns(
+  companies: CompanyOption[],
+  modulesByUser: Record<string, string[]>
+): ColumnDef<AuthUser>[] {
   return [
     {
       accessorKey: "email",
@@ -50,7 +53,13 @@ export function getColumns(companies: CompanyOption[]): ColumnDef<AuthUser>[] {
       cell: ({ row }) => (
         <RowActions
           editTitle="Edit User"
-          editForm={<AuthUserForm record={row.original} companies={companies} />}
+          editForm={
+            <AuthUserForm
+              record={row.original}
+              companies={companies}
+              initialModules={modulesByUser[row.original.id] ?? []}
+            />
+          }
         />
       ),
     },

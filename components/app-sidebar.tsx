@@ -25,12 +25,24 @@ import { authClient } from "@/lib/auth/client"
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   /** Count badges keyed by nav item url, e.g. { "/my-tasks": 3 }. */
   badges?: Record<string, number>
+  /** Nav urls the current user may access; others are hidden. */
+  accessibleHrefs?: string[]
 }
 
-export function AppSidebar({ badges = {}, ...props }: AppSidebarProps) {
+export function AppSidebar({ badges = {}, accessibleHrefs, ...props }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = authClient.useSession()
+
+  // Hide nav items the user can't access. When accessibleHrefs is undefined
+  // (not resolved) show everything rather than flash an empty sidebar.
+  const allowed = accessibleHrefs ? new Set(accessibleHrefs) : null
+  const groups = navMain
+    .map((group) => ({
+      ...group,
+      items: allowed ? group.items.filter((item) => allowed.has(item.url)) : group.items,
+    }))
+    .filter((group) => group.items.length > 0)
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -58,7 +70,7 @@ export function AppSidebar({ badges = {}, ...props }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {navMain.map((group) => (
+        {groups.map((group) => (
           <SidebarGroup key={group.title}>
             <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { setGrantedModules } from "@/lib/rbac";
 
 // These manage Neon Auth login accounts directly against the `neon_auth` schema
 // (better-auth tables). Passwords are hashed with better-auth's own hasher so
@@ -17,6 +18,8 @@ export async function createAuthUser(data: {
   role: string;
   // Optional client-portal company link (null = staff account, no portal company).
   companyId?: string | null;
+  // Grantable module keys this user may access (ignored for admins, who bypass).
+  modules?: string[];
 }) {
   const userId = randomUUID();
   const accountRowId = randomUUID();
@@ -51,11 +54,20 @@ export async function createAuthUser(data: {
   }
 
   await prisma.$transaction(ops);
+  await setGrantedModules(userId, data.modules ?? []);
 }
 
 export async function updateAuthUser(
   id: string,
-  data: { name: string; role: string; active: boolean; companyId?: string | null }
+  data: {
+    name: string;
+    role: string;
+    active: boolean;
+    companyId?: string | null;
+    // Grantable module keys (ignored for admins, who bypass). Omit to leave
+    // existing grants untouched.
+    modules?: string[];
+  }
 ) {
   await prisma.$executeRawUnsafe(
     `UPDATE neon_auth."user"
@@ -76,6 +88,10 @@ export async function updateAuthUser(
     });
   } else {
     await prisma.portalUser.deleteMany({ where: { authUserId: id } });
+  }
+
+  if (data.modules) {
+    await setGrantedModules(id, data.modules);
   }
 }
 

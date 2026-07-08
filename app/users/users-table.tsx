@@ -15,9 +15,11 @@ interface CompanyOption {
 export function UsersTable({
   data,
   companies,
+  modulesByUser,
 }: {
   data: AuthUser[];
   companies: CompanyOption[];
+  modulesByUser: Record<string, string[]>;
 }) {
-  return <DataTable columns={getColumns(companies)} data={data} />;
+  return <DataTable columns={getColumns(companies, modulesByUser)} data={data} />;
 }

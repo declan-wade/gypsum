@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sidebar"
 import { MoreHorizontalIcon } from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import { getCurrentUserId } from "@/lib/auth/server"
+import { getModuleAccess } from "@/lib/rbac"
 
 interface PageLayoutProps {
   title: string
@@ -29,7 +29,8 @@ interface PageLayoutProps {
 }
 
 export async function PageLayout({ title, actions, children }: PageLayoutProps) {
-  const userId = await getCurrentUserId()
+  const { user, accessibleHrefs } = await getModuleAccess()
+  const userId = user?.id ?? null
 
   const [incompleteTasks, unpaidInvoices] = await Promise.all([
     userId
@@ -49,7 +50,7 @@ export async function PageLayout({ title, actions, children }: PageLayoutProps) 
 
   return (
     <SidebarProvider>
-      <AppSidebar badges={badges} />
+      <AppSidebar badges={badges} accessibleHrefs={accessibleHrefs} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

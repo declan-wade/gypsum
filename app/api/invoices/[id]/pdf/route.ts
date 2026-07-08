@@ -1,4 +1,5 @@
 import { renderInvoicePdf } from "@/lib/pdf/render";
+import { hasModuleAccess } from "@/lib/rbac";
 
 // @formepdf/core runs a WASM layout engine via node:fs — pin to the Node runtime.
 export const runtime = "nodejs";
@@ -7,6 +8,10 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await hasModuleAccess("invoices"))) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   const { id } = await params;
   const result = await renderInvoicePdf(id);
 

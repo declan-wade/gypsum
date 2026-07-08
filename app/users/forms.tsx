@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import * as z from "zod";
-import { FieldGroup } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   FormTextField,
   FormSelectField,
@@ -10,8 +10,12 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createAuthUser, updateAuthUser, resetAuthUserPassword } from "./actions";
 import type { AuthUser } from "@/lib/auth/users";
+import { GRANTABLE_MODULES } from "@/lib/modules";
+
+const ALL_GRANTABLE_KEYS = GRANTABLE_MODULES.map((m) => m.key);
 
 const roleOptions = [
   { value: "user", label: "User" },
@@ -37,9 +41,12 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export function AuthUserForm({
   record,
   companies = [],
+  initialModules,
 }: {
   record?: AuthUser;
   companies?: CompanyOption[];
+  // Granted module keys for edit mode. New users default to all modules.
+  initialModules?: string[];
 }) {
   const onSuccess = useModalSuccess();
   const isEdit = !!record;
@@ -56,6 +63,7 @@ export function AuthUserForm({
       role: z.enum(["user", "admin"]),
       status: z.enum(["active", "inactive"]),
       companyId: z.string(),
+      modules: z.array(z.string()),
     })
     .superRefine((val, ctx) => {
       if (!isEdit && !EMAIL_RE.test(val.email)) {
@@ -77,6 +85,9 @@ export function AuthUserForm({
       role: (record?.role === "admin" ? "admin" : "user") as "user" | "admin",
       status: record?.banned ? "inactive" : "active",
       companyId: record?.companyId ?? NO_COMPANY,
+      // New users start with access to all modules (admin unchecks to restrict);
+      // editing shows the user's current grants.
+      modules: isEdit ? (initialModules ?? []) : ALL_GRANTABLE_KEYS,
     },
     validators: { onSubmit: userSchema },
     onSubmit: async ({ value }) => {
@@ -87,6 +98,7 @@ export function AuthUserForm({
           role: value.role,
           active: value.status === "active",
           companyId,
+          modules: value.modules,
         });
         if (value.password) {
           await resetAuthUserPassword(record.id, value.password);
@@ -99,6 +111,7 @@ export function AuthUserForm({
           password: value.password,
           role: value.role,
           companyId,
+          modules: value.modules,
         });
         successToast("User created successfully!");
       }
@@ -154,6 +167,52 @@ export function AuthUserForm({
             )}
           </form.Field>
         )}
+
+        <form.Subscribe selector={(state) => state.values.role}>
+          {(role) =>
+            role === "admin" ? (
+              <Field>
+                <FieldLabel>Module access</FieldLabel>
+                <p className="text-sm text-muted-foreground">
+                  Admins have access to all modules.
+                </p>
+              </Field>
+            ) : (
+              <form.Field name="modules">
+                {(field) => {
+                  const selected = new Set(field.state.value);
+                  const toggle = (key: string, checked: boolean) => {
+                    const next = new Set(selected);
+                    if (checked) next.add(key);
+                    else next.delete(key);
+                    field.handleChange([...next]);
+                  };
+                  return (
+                    <Field>
+                      <FieldLabel>Module access</FieldLabel>
+                      <div className="grid grid-cols-2 gap-2">
+                        {GRANTABLE_MODULES.map((module) => (
+                          <label
+                            key={module.key}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              checked={selected.has(module.key)}
+                              onCheckedChange={(checked) =>
+                                toggle(module.key, checked === true)
+                              }
+                            />
+                            {module.label}
+                          </label>
+                        ))}
+                      </div>
+                    </Field>
+                  );
+                }}
+              </form.Field>
+            )
+          }
+        </form.Subscribe>
       </FieldGroup>
       <FormActions />
     </form>

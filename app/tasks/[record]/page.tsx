@@ -19,6 +19,7 @@ import { TaskForm } from "@/app/tasks/forms";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
 import { getAuthUserOptions } from "@/lib/auth/users";
+import { DeleteTaskButton } from "./delete-task-button";
 
 export default async function Page({
   params,
@@ -105,6 +106,7 @@ export default async function Page({
               assignees={authUsers.options}
             />
           </ModalButton>
+          <DeleteTaskButton id={task.id} title={task.title} />
           <ActivityDrawer activities={activities} />
         </>
       }

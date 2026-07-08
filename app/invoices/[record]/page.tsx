@@ -12,7 +12,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
-import { columns } from "./columns";
+import { getColumns } from "./columns";
 import { paymentColumns } from "./payment-columns";
 import { AddLineItemForm } from "./forms";
 import { PaymentForm } from "./payment-form";
@@ -47,6 +47,7 @@ export default async function Page({
 
   const lineItems = invoice.lineItems.map((item) => ({
     id: item.id,
+    productId: item.productId,
     description: item.description,
     productName: item.product?.name ?? null,
     quantity: Number(item.quantity),
@@ -152,7 +153,7 @@ export default async function Page({
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium">Line Items ({lineItems.length})</h2>
         <DataTable
-          columns={columns}
+          columns={getColumns(productOptions)}
           data={lineItems}
           action={
             <ModalButton label="Add Line Item" title="Add Line Item">

@@ -11,7 +11,7 @@ import {
 } from "@/components/form-fields";
 import { successToast } from "@/lib/toast";
 import { useModalSuccess } from "@/components/modal";
-import { addQuoteLineItem } from "./actions";
+import { addQuoteLineItem, updateQuoteLineItem } from "./actions";
 
 export interface ProductOption {
   value: string;
@@ -42,6 +42,87 @@ const gstOptions = [
 interface AddLineItemFormProps {
   quoteId: string;
   products: ProductOption[];
+}
+
+export interface LineItemRecord {
+  id: string;
+  productId: string | null;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxable: boolean;
+}
+
+interface EditLineItemFormProps {
+  lineItem: LineItemRecord;
+  products: ProductOption[];
+}
+
+export function EditLineItemForm({ lineItem, products }: EditLineItemFormProps) {
+  const onSuccess = useModalSuccess();
+  const form = useForm({
+    defaultValues: {
+      productId: lineItem.productId ?? "",
+      description: lineItem.description,
+      quantity: String(lineItem.quantity),
+      unitPrice: String(lineItem.unitPrice),
+      taxable: (lineItem.taxable ? "yes" : "no") as "yes" | "no",
+    },
+    validators: { onSubmit: lineItemSchema },
+    onSubmit: async ({ value }) => {
+      await updateQuoteLineItem(lineItem.id, {
+        productId: value.productId || null,
+        description: value.description,
+        quantity: Number(value.quantity),
+        unitPrice: Number(value.unitPrice),
+        taxable: value.taxable === "yes",
+      });
+      successToast("Line item updated.");
+      onSuccess?.();
+    },
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
+    >
+      <FieldGroup>
+        <form.Field name="productId">
+          {(field) => (
+            <FormSelectField
+              field={field}
+              label="Product"
+              placeholder="Select a product (optional)"
+              options={products}
+              onValueChange={(value) => {
+                const product = products.find((p) => p.value === value);
+                if (product) {
+                  form.setFieldValue("description", product.description || product.label);
+                  form.setFieldValue("unitPrice", String(product.unitPrice));
+                }
+              }}
+            />
+          )}
+        </form.Field>
+        <form.Field name="description">
+          {(field) => <FormTextField field={field} label="Description" placeholder="Enter description" />}
+        </form.Field>
+        <form.Field name="quantity">
+          {(field) => <FormNumberField field={field} label="Quantity" placeholder="1" step="0.01" />}
+        </form.Field>
+        <form.Field name="unitPrice">
+          {(field) => <FormNumberField field={field} label="Unit Price" placeholder="0.00" step="0.01" />}
+        </form.Field>
+        <form.Field name="taxable">
+          {(field) => <FormSelectField field={field} label="GST" placeholder="Select GST" options={gstOptions} />}
+        </form.Field>
+      </FieldGroup>
+      <FormActions />
+    </form>
+  );
 }
 
 export function AddLineItemForm({ quoteId, products }: AddLineItemFormProps) {

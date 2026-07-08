@@ -44,6 +44,40 @@ export async function addInvoiceLineItem(
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
+export async function updateInvoiceLineItem(
+  id: string,
+  data: {
+    productId: string | null;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxable: boolean;
+  }
+) {
+  const item = await prisma.invoiceLineItem.update({
+    where: { id },
+    data: {
+      productId: data.productId,
+      description: data.description,
+      quantity: data.quantity,
+      unitPrice: data.unitPrice,
+      lineTotal: round2(data.quantity * data.unitPrice),
+      taxable: data.taxable,
+    },
+    select: { invoiceId: true, description: true },
+  });
+
+  await recalcInvoiceTotals(item.invoiceId);
+  await recalcInvoicePayments(item.invoiceId);
+  await logActivity({
+    entityType: "Invoice",
+    entityId: item.invoiceId,
+    action: "UPDATED",
+    summary: `Updated line item: ${item.description}`,
+  });
+  revalidatePath(`/invoices/${item.invoiceId}`);
+}
+
 export async function deleteInvoiceLineItem(id: string) {
   const item = await prisma.invoiceLineItem.delete({
     where: { id },

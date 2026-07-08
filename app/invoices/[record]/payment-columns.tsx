@@ -1,6 +1,5 @@
 "use client";
 
-import { useTransition } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
 
@@ -24,8 +23,7 @@ function humanizeMethod(method: string) {
     .join(" ");
 }
 
-function PaymentRowActions({ id }: { id: string }) {
-  const [, startTransition] = useTransition();
+function PaymentRowActions({ id, amount }: { id: string; amount: number }) {
   const router = useRouter();
 
   return (
@@ -34,11 +32,15 @@ function PaymentRowActions({ id }: { id: string }) {
         {
           label: "Delete",
           destructive: true,
-          onSelect: () =>
-            startTransition(async () => {
-              await deletePayment(id);
-              router.refresh();
-            }),
+          confirm: {
+            title: "Delete payment?",
+            description: `The payment of ${formatMoney(amount)} will be removed and the invoice balance recalculated.`,
+            confirmLabel: "Delete",
+          },
+          onSelect: async () => {
+            await deletePayment(id);
+            router.refresh();
+          },
         },
       ]}
     />
@@ -69,6 +71,6 @@ export const paymentColumns: ColumnDef<PaymentRow>[] = [
   {
     id: "actions",
     header: "",
-    cell: ({ row }) => <PaymentRowActions id={row.original.id} />,
+    cell: ({ row }) => <PaymentRowActions id={row.original.id} amount={row.original.amount} />,
   },
 ];

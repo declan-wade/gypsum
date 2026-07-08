@@ -87,3 +87,19 @@ export async function updateTask(
   }
   revalidatePath(`/projects/${data.projectId}`);
 }
+
+export async function deleteTask(id: string) {
+  const task = await prisma.task.delete({
+    where: { id },
+    select: { title: true, projectId: true },
+  });
+  await logActivity({
+    entityType: "Task",
+    entityId: id,
+    action: "DELETED",
+    summary: `Deleted task ${task.title}`,
+  });
+  revalidatePath("/tasks");
+  revalidatePath("/my-tasks");
+  revalidatePath(`/projects/${task.projectId}`);
+}

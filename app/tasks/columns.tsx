@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
+import { RowActions } from "@/components/row-actions";
+import { deleteTask } from "./actions";
 
 export type TaskRow = {
   id: string;
@@ -13,6 +16,30 @@ export type TaskRow = {
   status: string;
   dueDate: Date | null;
 };
+
+function TaskRowActions({ id, title }: { id: string; title: string }) {
+  const router = useRouter();
+
+  return (
+    <RowActions
+      actions={[
+        {
+          label: "Delete",
+          destructive: true,
+          confirm: {
+            title: "Delete task?",
+            description: `"${title}" will be permanently deleted. This can't be undone.`,
+            confirmLabel: "Delete",
+          },
+          onSelect: async () => {
+            await deleteTask(id);
+            router.refresh();
+          },
+        },
+      ]}
+    />
+  );
+}
 
 export const columns: ColumnDef<TaskRow>[] = [
   {
@@ -45,5 +72,10 @@ export const columns: ColumnDef<TaskRow>[] = [
     accessorKey: "dueDate",
     header: "Due",
     cell: ({ row }) => formatDate(row.original.dueDate),
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => <TaskRowActions id={row.original.id} title={row.original.title} />,
   },
 ];

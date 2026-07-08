@@ -58,6 +58,12 @@ const statusTones: Record<string, Tone> = {
   EXPIRED: "gray",
   TODO: "gray",
   MEMBER: "gray",
+  // workflow run / step statuses (lowercase, from the Workflow SDK)
+  running: "amber",
+  pending: "gray",
+  completed: "green",
+  failed: "red",
+  cancelled: "gray",
 }
 
 function humanize(value: string) {

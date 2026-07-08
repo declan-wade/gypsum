@@ -32,3 +32,17 @@ export function formatDateTime(value: Date | string | null | undefined) {
   if (!value) return "—"
   return dateTimeFormatter.format(new Date(value))
 }
+
+// Human-friendly elapsed time, e.g. "1.2s", "3m 4s", "2h 5m", "3d 1h".
+export function formatDuration(ms: number | null | undefined) {
+  if (ms === null || ms === undefined || ms < 0) return "—"
+  if (ms < 1000) return `${ms}ms`
+  const s = Math.floor(ms / 1000)
+  if (s < 60) return `${(ms / 1000).toFixed(1)}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ${m % 60}m`
+  const d = Math.floor(h / 24)
+  return `${d}d ${h % 24}h`
+}

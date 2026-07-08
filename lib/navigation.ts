@@ -17,6 +17,7 @@ import {
   House,
   CircleCheckBig,
   TowerControl,
+  Workflow,
 } from "lucide-react"
 
 export interface NavItem {
@@ -68,6 +69,13 @@ export const navMain: NavGroup[] = [
       { title: "Tasks", url: "/tasks", icon: ListChecks },
       { title: "Users", url: "/users", icon: UserCog },
       { title: "Time Tracking", url: "/time-tracking", icon: Clock },
+    ],
+  },
+  {
+    title: "Operations",
+    url: "#",
+    items: [
+      { title: "Workflows", url: "/workflows", icon: Workflow },
     ],
   },
   {

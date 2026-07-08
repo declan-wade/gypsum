@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeftIcon, PencilIcon, FileTextIcon } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
-import { DataTable } from "@/components/data-table";
 import { ModalButton } from "@/components/modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
-import { getColumns } from "./columns";
+import { LineItemsTable } from "./line-items-table";
 import { AddLineItemForm } from "./forms";
 import { QuoteForm } from "@/app/quotes/forms";
 
@@ -137,9 +136,9 @@ export default async function Page({
 
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium">Line Items ({lineItems.length})</h2>
-        <DataTable
-          columns={getColumns(productOptions)}
+        <LineItemsTable
           data={lineItems}
+          products={productOptions}
           action={
             <ModalButton label="Add Line Item" title="Add Line Item">
               <AddLineItemForm quoteId={quote.id} products={productOptions} />

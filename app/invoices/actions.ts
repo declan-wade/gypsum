@@ -1,9 +1,11 @@
 "use server";
 
+import { start } from "workflow/api";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { notifyInvoiceSent } from "@/lib/email";
 import { formatMoney } from "@/lib/format";
+import { trackInvoiceOverdue } from "@/workflows/invoice-overdue";
 import type { InvoiceStatus } from "@prisma/client";
 
 export async function createInvoice(data: {
@@ -35,6 +37,7 @@ export async function createInvoice(data: {
       companyName: invoice.company.name,
       total: formatMoney(invoice.total.toString()),
     });
+    await start(trackInvoiceOverdue, [invoice.id]);
   }
 }
 
@@ -77,5 +80,6 @@ export async function updateInvoice(
       companyName: invoice.company.name,
       total: formatMoney(invoice.total.toString()),
     });
+    await start(trackInvoiceOverdue, [id]);
   }
 }

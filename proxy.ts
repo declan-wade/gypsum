@@ -18,9 +18,11 @@ export default async function proxy(request: NextRequest) {
 }
 
 // Run on everything except API routes (they handle their own auth and must not
-// be redirected to the HTML sign-in page), the auth pages, and static assets.
+// be redirected to the HTML sign-in page), the auth pages, static assets, and
+// the Workflow SDK's internal webhook path (external callers hit this
+// unauthenticated; it isn't under /api/ so needs its own exclusion).
 export const config = {
   matcher: [
-    "/((?!api/|sign-in|sign-up|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/|sign-in|sign-up|_next/static|_next/image|favicon.ico|.well-known/workflow/).*)",
   ],
 };

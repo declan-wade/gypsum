@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getWorld } from "workflow/runtime";
+import { WorkflowRunNotFoundError } from "workflow/internal/errors";
 import {
   hydrateResourceIO,
   observabilityRevivers,
@@ -213,32 +214,64 @@ export async function getWorkflowsOverview(): Promise<WorkflowsOverview> {
   }
 }
 
+// Returns null ONLY when the run genuinely doesn't exist (so the page can 404).
+// Any other failure — most commonly the backend failing to resolve a run's I/O
+// blobs when resolveData: "all" is requested — is NOT treated as "not found":
+// we degrade to an unresolved fetch so the run still renders, and rethrow if
+// even that fails so the real error surfaces in logs instead of a silent 404.
 export async function getWorkflowRun(runId: string): Promise<RunDetail | null> {
+  const world = getWorld();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let run: any;
   try {
-    const world = getWorld();
-    const [run, steps] = await Promise.all([
-      world.runs.get(runId, { resolveData: "all" }),
-      world.steps.list({
-        runId,
-        resolveData: "all",
-        pagination: { limit: 500, sortOrder: "asc" },
-      }),
-    ]);
-
-    if (!run) return null;
-
-    const summary = mapRun(run);
-    const { input, output } = hydrateIO(run);
-
-    return {
-      ...summary,
-      input,
-      output,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      errorStack: (run as any).error?.stack ?? null,
-      steps: steps.data.map(mapStep),
-    };
-  } catch {
-    return null;
+    run = await world.runs.get(runId, { resolveData: "all" });
+  } catch (error) {
+    if (WorkflowRunNotFoundError.is(error)) return null;
+    // The run exists but its data couldn't be resolved — retry without
+    // resolving I/O so the page still renders (input/output show as "—").
+    console.error(`[workflows] failed to resolve run ${runId}, retrying without data:`, error);
+    run = await world.runs.get(runId, { resolveData: "none" }).catch((retryError) => {
+      if (WorkflowRunNotFoundError.is(retryError)) return null;
+      throw retryError;
+    });
   }
+
+  if (!run) return null;
+
+  // Steps are best-effort: a failure listing/resolving them shouldn't 404 the
+  // whole run. Fall back to an unresolved list, then to no steps.
+  let steps: StepSummary[] = [];
+  try {
+    const result = await world.steps.list({
+      runId,
+      resolveData: "all",
+      pagination: { limit: 500, sortOrder: "asc" },
+    });
+    steps = result.data.map(mapStep);
+  } catch (error) {
+    console.error(`[workflows] failed to resolve steps for run ${runId}:`, error);
+    try {
+      const result = await world.steps.list({
+        runId,
+        resolveData: "none",
+        pagination: { limit: 500, sortOrder: "asc" },
+      });
+      steps = result.data.map(mapStep);
+    } catch {
+      steps = [];
+    }
+  }
+
+  const summary = mapRun(run);
+  const { input, output } = hydrateIO(run);
+
+  return {
+    ...summary,
+    input,
+    output,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    errorStack: (run as any).error?.stack ?? null,
+    steps,
+  };
 }

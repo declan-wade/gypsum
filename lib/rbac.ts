@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/server";
+import { isPortalUserId } from "@/lib/auth/users";
 import {
   computeAccessibleModules,
   hrefsForModuleKeys,
@@ -15,6 +16,10 @@ import {
 export interface ModuleAccess {
   user: CurrentUser | null;
   isAdmin: boolean;
+  // True when this login is a client-portal account (has a PortalUser row).
+  // Portal clients share the auth backend with the separate portal project
+  // but must never access the CRM itself — they get an empty accessible set.
+  isPortalClient: boolean;
   // Module keys this user may access (see lib/modules.ts).
   accessible: Set<string>;
   // Route hrefs for the accessible modules — used to filter the sidebar.
@@ -22,17 +27,43 @@ export interface ModuleAccess {
 }
 
 // Resolves the current user's module access once per request. Admins get
-// everything; everyone else gets always-on modules plus their granted set.
-// Fails closed: if the permission lookup errors (e.g. the table hasn't been
-// migrated yet), non-admins get only the always-on modules rather than being
-// silently granted access.
+// everything; portal clients get nothing; everyone else gets always-on
+// modules plus their granted set. Fails closed: if the permission lookup
+// errors (e.g. the table hasn't been migrated yet), non-admins get only the
+// always-on modules rather than being silently granted access — and a portal
+// lookup failure treats the user as a client rather than granting access.
 export const getModuleAccess = cache(async (): Promise<ModuleAccess> => {
   const user = await getCurrentUser();
   if (!user) {
-    return { user: null, isAdmin: false, accessible: new Set(), accessibleHrefs: [] };
+    return {
+      user: null,
+      isAdmin: false,
+      isPortalClient: false,
+      accessible: new Set(),
+      accessibleHrefs: [],
+    };
   }
 
   const admin = isAdminRole(user.role);
+
+  if (!admin) {
+    let portalClient: boolean;
+    try {
+      portalClient = await isPortalUserId(user.id);
+    } catch {
+      portalClient = true; // fail closed
+    }
+    if (portalClient) {
+      return {
+        user,
+        isAdmin: false,
+        isPortalClient: true,
+        accessible: new Set(),
+        accessibleHrefs: [],
+      };
+    }
+  }
+
   let granted: string[] = [];
   if (!admin) {
     try {
@@ -46,6 +77,7 @@ export const getModuleAccess = cache(async (): Promise<ModuleAccess> => {
   return {
     user,
     isAdmin: admin,
+    isPortalClient: false,
     accessible,
     accessibleHrefs: hrefsForModuleKeys(accessible),
   };

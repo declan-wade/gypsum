@@ -32,14 +32,41 @@ export async function listAuthUsers(): Promise<AuthUser[]> {
   );
 }
 
+// A portal client is a login tied to a company via PortalUser. These accounts
+// exist only to sign in to the separate client-portal project: they must never
+// receive internal CRM notifications or access the CRM itself.
+export function isPortalClient(user: Pick<AuthUser, "companyId">): boolean {
+  return user.companyId !== null;
+}
+
+/** Auth users who are CRM staff — i.e. NOT client-portal accounts. Use this
+ * (never listAuthUsers) when building notification recipient lists. */
+export async function listStaffUsers(): Promise<AuthUser[]> {
+  const users = await listAuthUsers();
+  return users.filter((u) => !isPortalClient(u));
+}
+
+/** Whether a single auth user id belongs to a client-portal account. */
+export async function isPortalUserId(authUserId: string): Promise<boolean> {
+  const row = await prisma.portalUser.findUnique({
+    where: { authUserId },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 // Convenience for task assignment: select options + an id→name lookup.
+// Options only include staff (clients can't be assigned CRM work), but the
+// name lookup covers everyone so historical records still resolve names.
 export async function getAuthUserOptions(): Promise<{
   options: { value: string; label: string }[];
   nameById: Map<string, string>;
 }> {
   const users = await listAuthUsers();
   return {
-    options: users.map((u) => ({ value: u.id, label: u.name })),
+    options: users
+      .filter((u) => !isPortalClient(u))
+      .map((u) => ({ value: u.id, label: u.name })),
     nameById: new Map(users.map((u) => [u.id, u.name])),
   };
 }

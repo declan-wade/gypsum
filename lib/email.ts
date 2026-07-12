@@ -2,7 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
-import { listAuthUsers } from "@/lib/auth/users";
+import { isPortalUserId, listStaffUsers } from "@/lib/auth/users";
 import type { NotificationSettings } from "@prisma/client";
 
 // Which per-user boolean toggle controls a given notification.
@@ -68,10 +68,11 @@ function prefEnabled(
   return settings ? settings[pref] : true;
 }
 
-/** Auth users who want a given broadcast notification (default on). */
+/** Staff users who want a given broadcast notification (default on). Portal
+ * client accounts are never included — internal CRM mail must not reach them. */
 async function recipientsFor(pref: NotificationPref): Promise<Recipient[]> {
   const [users, allSettings] = await Promise.all([
-    listAuthUsers(),
+    listStaffUsers(),
     prisma.notificationSettings.findMany(),
   ]);
   const byId = new Map(allSettings.map((s) => [s.userId, s]));
@@ -80,19 +81,21 @@ async function recipientsFor(pref: NotificationPref): Promise<Recipient[]> {
     .map((u) => ({ id: u.id, name: u.name, email: u.email }));
 }
 
-/** A single auth user, if they want a given targeted notification. */
+/** A single auth user, if they want a given targeted notification. Portal
+ * client accounts never receive internal notifications. */
 async function recipientIfEnabled(
   userId: string,
   pref: NotificationPref
 ): Promise<Recipient | null> {
-  const [rows, settings] = await Promise.all([
+  const [rows, settings, isClient] = await Promise.all([
     prisma.$queryRaw<{ email: string; name: string }[]>`
       SELECT email, name FROM neon_auth."user" WHERE id = ${userId} LIMIT 1
     `,
     prisma.notificationSettings.findUnique({ where: { userId } }),
+    isPortalUserId(userId),
   ]);
   const user = rows[0];
-  if (!user?.email || !prefEnabled(settings, pref)) return null;
+  if (isClient || !user?.email || !prefEnabled(settings, pref)) return null;
   return { id: userId, name: user.name, email: user.email };
 }
 
@@ -171,10 +174,10 @@ export async function notifyTaskDueSoon(params: {
   });
 }
 
-/** Broadcast to every auth user with an email — for workflow notifications
- * that don't (yet) have a per-user preference toggle. */
+/** Broadcast to every staff user with an email — for workflow notifications
+ * that don't (yet) have a per-user preference toggle. Portal clients excluded. */
 async function broadcast(subject: string, body: string): Promise<void> {
-  const users = await listAuthUsers();
+  const users = await listStaffUsers();
   const recipients = users.filter((u) => u.email);
   await Promise.all(
     recipients.map((u) =>

@@ -19,6 +19,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { MoreHorizontalIcon } from "lucide-react"
+import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getModuleAccess } from "@/lib/rbac"
 
@@ -29,7 +30,15 @@ interface PageLayoutProps {
 }
 
 export async function PageLayout({ title, actions, children }: PageLayoutProps) {
-  const { user, accessibleHrefs } = await getModuleAccess()
+  const { user, accessibleHrefs, isPortalClient } = await getModuleAccess()
+
+  // Client-portal accounts share the auth backend but belong in the portal
+  // project, not the CRM. Every CRM page renders through this layout, so this
+  // is the central gate.
+  if (user && isPortalClient) {
+    redirect("/portal-only")
+  }
+
   const userId = user?.id ?? null
 
   const [incompleteTasks, unpaidInvoices] = await Promise.all([

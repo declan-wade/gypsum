@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { notifyTaskAssigned } from "@/lib/email";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
 import type { TaskStatus } from "@prisma/client";
 
 export async function createTask(data: {
@@ -31,7 +32,7 @@ export async function createTask(data: {
     action: "CREATED",
     summary: `Created task ${task.title}`,
   });
-  if (task.assigneeId) {
+  if (task.assigneeId && (await isWorkflowEnabled("task-assigned-notification"))) {
     await notifyTaskAssigned({
       assigneeId: task.assigneeId,
       title: task.title,
@@ -77,7 +78,11 @@ export async function updateTask(
     summary: `Updated task ${task.title}`,
   });
   // Only notify when the assignee actually changes to a new person.
-  if (task.assigneeId && task.assigneeId !== previous?.assigneeId) {
+  if (
+    task.assigneeId &&
+    task.assigneeId !== previous?.assigneeId &&
+    (await isWorkflowEnabled("task-assigned-notification"))
+  ) {
     await notifyTaskAssigned({
       assigneeId: task.assigneeId,
       title: task.title,

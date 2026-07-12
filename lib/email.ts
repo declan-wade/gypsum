@@ -171,6 +171,79 @@ export async function notifyTaskDueSoon(params: {
   });
 }
 
+/** Broadcast to every auth user with an email — for workflow notifications
+ * that don't (yet) have a per-user preference toggle. */
+async function broadcast(subject: string, body: string): Promise<void> {
+  const users = await listAuthUsers();
+  const recipients = users.filter((u) => u.email);
+  await Promise.all(
+    recipients.map((u) =>
+      sendEmail({
+        to: u.email,
+        subject,
+        text: `Hi ${u.name},\n\n${body}\n\n— Gypsum`,
+      })
+    )
+  );
+}
+
+/** A sent quote has gone quiet — nudge the team to follow up. */
+export async function notifyQuoteFollowUp(params: {
+  number: string;
+  companyName?: string | null;
+  total?: string | null;
+  daysSinceSent: number;
+}): Promise<void> {
+  const company = params.companyName ? ` for ${params.companyName}` : "";
+  const total = params.total ? ` (${params.total})` : "";
+  await broadcast(
+    `Quote ${params.number} needs a follow-up`,
+    `Quote ${params.number}${total}${company} was sent ${params.daysSinceSent} days ago and hasn't been accepted or rejected yet. It might be worth a follow-up.`
+  );
+}
+
+/** A quote passed its expiry date and was auto-expired. */
+export async function notifyQuoteExpired(params: {
+  number: string;
+  companyName?: string | null;
+}): Promise<void> {
+  const company = params.companyName ? ` for ${params.companyName}` : "";
+  await broadcast(
+    `Quote ${params.number} has expired`,
+    `Quote ${params.number}${company} passed its expiry date without a response and has been marked Expired.`
+  );
+}
+
+/** An open deal has sat in the same stage for too long. */
+export async function notifyDealStale(params: {
+  title: string;
+  companyName?: string | null;
+  stage: string;
+  staleDays: number;
+  value?: string | null;
+}): Promise<void> {
+  const company = params.companyName ? ` (${params.companyName})` : "";
+  const value = params.value ? ` worth ${params.value}` : "";
+  await broadcast(
+    `Deal going stale: ${params.title}`,
+    `The deal "${params.title}"${company}${value} has been sitting in ${params.stage} for ${params.staleDays} days without movement.`
+  );
+}
+
+/** An active project's end date is approaching. */
+export async function notifyProjectDeadline(params: {
+  name: string;
+  companyName?: string | null;
+  endDate: Date;
+  leadDays: number;
+}): Promise<void> {
+  const company = params.companyName ? ` for ${params.companyName}` : "";
+  await broadcast(
+    `Project deadline approaching: ${params.name}`,
+    `The project "${params.name}"${company} is due on ${params.endDate.toLocaleDateString()} — ${params.leadDays} days from now.`
+  );
+}
+
 /** Invoices just became overdue — broadcast a digest to everyone opted in. */
 export async function notifyInvoicesOverdue(
   invoices: { number: string; companyName?: string | null; total?: string | null }[]

@@ -1,8 +1,19 @@
 "use server";
 
+import { start } from "workflow/api";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
+import { trackDealStale } from "@/workflows/deal-stale";
 import type { DealStage } from "@prisma/client";
+
+// Starts a stale-deal watch for the deal's current stage. Any previous watch
+// exits on wake when it sees the stage changed.
+async function watchDealStaleness(dealId: string, stage: DealStage) {
+  if (["WON", "LOST"].includes(stage)) return;
+  if (!(await isWorkflowEnabled("deal-stale"))) return;
+  await start(trackDealStale, [dealId]);
+}
 
 export async function createDeal(data: {
   title: string;
@@ -26,9 +37,14 @@ export async function createDeal(data: {
     action: "CREATED",
     summary: `Created deal ${deal.title}`,
   });
+  await watchDealStaleness(deal.id, deal.stage);
 }
 
 export async function updateDealStage(id: string, stage: DealStage) {
+  const previous = await prisma.deal.findUnique({
+    where: { id },
+    select: { stage: true },
+  });
   const deal = await prisma.deal.update({
     where: { id },
     data: { stage },
@@ -39,6 +55,9 @@ export async function updateDealStage(id: string, stage: DealStage) {
     action: "UPDATED",
     summary: `Moved deal ${deal.title} to ${stage}`,
   });
+  if (previous?.stage !== deal.stage) {
+    await watchDealStaleness(id, deal.stage);
+  }
 }
 
 export async function updateDeal(
@@ -51,6 +70,10 @@ export async function updateDeal(
     expectedCloseDate: Date | null;
   }
 ) {
+  const previous = await prisma.deal.findUnique({
+    where: { id },
+    select: { stage: true },
+  });
   const deal = await prisma.deal.update({
     where: { id },
     data: {
@@ -67,4 +90,7 @@ export async function updateDeal(
     action: "UPDATED",
     summary: `Updated deal ${deal.title}`,
   });
+  if (previous?.stage !== deal.stage) {
+    await watchDealStaleness(id, deal.stage);
+  }
 }

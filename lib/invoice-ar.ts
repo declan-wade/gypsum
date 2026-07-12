@@ -1,13 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { notifyInvoicesOverdue } from "@/lib/email";
 import { formatMoney } from "@/lib/format";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
 
 // Flags sent / partially-paid invoices as OVERDUE once their due date has
 // passed. SENT and PARTIAL both still have an outstanding balance (PAID is a
 // separate status), so a status filter is enough — no column comparison needed.
 // Idempotent: safe to run on page load or from the cron route. Because each
 // invoice transitions to OVERDUE exactly once, the overdue email fires once too.
+// Acts as the sweep backstop for the per-invoice "invoice-overdue" workflow
+// and is governed by the same switch: disabled means no sweep either.
 export async function markOverdueInvoices(): Promise<number> {
+  if (!(await isWorkflowEnabled("invoice-overdue"))) return 0;
   const toMark = await prisma.invoice.findMany({
     where: {
       status: { in: ["SENT", "PARTIAL"] },

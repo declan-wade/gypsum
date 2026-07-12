@@ -1,8 +1,23 @@
 "use server";
 
+import { start } from "workflow/api";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
+import { trackProjectDeadline } from "@/workflows/project-deadline";
 import type { ProjectStatus } from "@prisma/client";
+
+// Starts a deadline watch for an active project's end date. A previous watch
+// for an older end date exits on wake when it sees the date changed.
+async function watchProjectDeadline(
+  projectId: string,
+  status: ProjectStatus,
+  endDate: Date | null
+) {
+  if (status !== "ACTIVE" || !endDate) return;
+  if (!(await isWorkflowEnabled("project-deadline"))) return;
+  await start(trackProjectDeadline, [projectId]);
+}
 
 export async function createProject(data: {
   name: string;
@@ -32,6 +47,7 @@ export async function createProject(data: {
     action: "CREATED",
     summary: `Created project ${project.name}`,
   });
+  await watchProjectDeadline(project.id, project.status, project.endDate);
 }
 
 export async function updateProject(
@@ -47,6 +63,10 @@ export async function updateProject(
     description: string | null;
   }
 ) {
+  const previous = await prisma.project.findUnique({
+    where: { id },
+    select: { endDate: true },
+  });
   const project = await prisma.project.update({
     where: { id },
     data: {
@@ -66,4 +86,9 @@ export async function updateProject(
     action: "UPDATED",
     summary: `Updated project ${project.name}`,
   });
+  // Only start a new watch when the end date actually changes; the old watch
+  // exits on its own once it sees the date no longer matches.
+  if (previous?.endDate?.getTime() !== project.endDate?.getTime()) {
+    await watchProjectDeadline(id, project.status, project.endDate);
+  }
 }

@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { notifyTaskDueSoon } from "@/lib/email";
+import { getWorkflowConfig } from "@/lib/workflow-config";
 
-// Emails assignees about their tasks due within the next `withinHours`, then
-// stamps each task's `dueSoonNotifiedAt` so it is reminded at most once.
-// Idempotent: tasks already stamped are skipped.
-export async function sendDueSoonTaskReminders(withinHours = 24): Promise<number> {
+// Emails assignees about their tasks due within the configured window (the
+// "task-due-soon" automation on the Workflows page), then stamps each task's
+// `dueSoonNotifiedAt` so it is reminded at most once. Idempotent: tasks
+// already stamped are skipped. Returns 0 without querying when disabled.
+export async function sendDueSoonTaskReminders(): Promise<number> {
+  const config = await getWorkflowConfig("task-due-soon");
+  if (!config.enabled) return 0;
+  const withinHours = Number(config.settings.windowHours ?? 24);
+
   const now = new Date();
   const horizon = new Date(now.getTime() + withinHours * 60 * 60 * 1000);
 

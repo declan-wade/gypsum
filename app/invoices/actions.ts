@@ -5,8 +5,29 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { notifyInvoiceSent } from "@/lib/email";
 import { formatMoney } from "@/lib/format";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
 import { trackInvoiceOverdue } from "@/workflows/invoice-overdue";
 import type { InvoiceStatus } from "@prisma/client";
+
+// Automations that fire on the transition into SENT, each behind its own
+// switch on the Workflows page.
+async function onInvoiceSent(invoice: {
+  id: string;
+  number: string;
+  total: unknown;
+  company: { name: string };
+}) {
+  if (await isWorkflowEnabled("invoice-sent-notification")) {
+    await notifyInvoiceSent({
+      number: invoice.number,
+      companyName: invoice.company.name,
+      total: formatMoney(String(invoice.total)),
+    });
+  }
+  if (await isWorkflowEnabled("invoice-overdue")) {
+    await start(trackInvoiceOverdue, [invoice.id]);
+  }
+}
 
 export async function createInvoice(data: {
   number: string;
@@ -32,12 +53,7 @@ export async function createInvoice(data: {
     summary: `Created invoice ${invoice.number}`,
   });
   if (invoice.status === "SENT") {
-    await notifyInvoiceSent({
-      number: invoice.number,
-      companyName: invoice.company.name,
-      total: formatMoney(invoice.total.toString()),
-    });
-    await start(trackInvoiceOverdue, [invoice.id]);
+    await onInvoiceSent(invoice);
   }
 }
 
@@ -75,11 +91,6 @@ export async function updateInvoice(
   });
   // Only notify on the transition into SENT, not on every save of a sent invoice.
   if (invoice.status === "SENT" && previous?.status !== "SENT") {
-    await notifyInvoiceSent({
-      number: invoice.number,
-      companyName: invoice.company.name,
-      total: formatMoney(invoice.total.toString()),
-    });
-    await start(trackInvoiceOverdue, [id]);
+    await onInvoiceSent(invoice);
   }
 }

@@ -1,7 +1,10 @@
 "use server";
 
+import { start } from "workflow/api";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { isWorkflowEnabled } from "@/lib/workflow-config";
+import { trackQuoteFollowUp } from "@/workflows/quote-follow-up";
 import type { QuoteStatus } from "@prisma/client";
 
 export async function createQuote(data: {
@@ -26,6 +29,9 @@ export async function createQuote(data: {
     action: "CREATED",
     summary: `Created quote ${quote.number}`,
   });
+  if (quote.status === "SENT" && (await isWorkflowEnabled("quote-follow-up"))) {
+    await start(trackQuoteFollowUp, [quote.id]);
+  }
 }
 
 export async function updateQuote(
@@ -38,6 +44,11 @@ export async function updateQuote(
     notes: string | null;
   }
 ) {
+  const previous = await prisma.quote.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+
   const quote = await prisma.quote.update({
     where: { id },
     data: {
@@ -54,4 +65,13 @@ export async function updateQuote(
     action: "UPDATED",
     summary: `Updated quote ${quote.number}`,
   });
+  // Only start the follow-up tracker on the transition into SENT, not on
+  // every save of a sent quote.
+  if (
+    quote.status === "SENT" &&
+    previous?.status !== "SENT" &&
+    (await isWorkflowEnabled("quote-follow-up"))
+  ) {
+    await start(trackQuoteFollowUp, [id]);
+  }
 }

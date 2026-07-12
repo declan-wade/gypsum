@@ -1,25 +1,77 @@
 import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
 import { Card, CardContent } from "@/components/ui/card";
+import { RecordSection } from "@/components/record-section";
+import { StatStrip, type StatStripItem } from "@/components/stat-strip";
 import { getWorkflowsOverview } from "@/lib/workflow-observability";
+import { getAllWorkflowConfigs } from "@/lib/workflow-config";
+import { WORKFLOW_REGISTRY } from "@/lib/workflow-registry";
 import { columns } from "./columns";
 import { AutoRefresh } from "./auto-refresh";
+import { AutomationCard } from "./automation-card";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  const { runs, counts, available } = await getWorkflowsOverview();
+const CATEGORIES = ["Finance", "Sales", "Delivery"] as const;
 
-  const active = counts.running + counts.pending;
-  const stats = [
-    { label: "Active", value: active, hint: `${counts.running} running · ${counts.pending} pending` },
+export default async function Page() {
+  const [{ runs, counts, available }, configs] = await Promise.all([
+    getWorkflowsOverview(),
+    getAllWorkflowConfigs(),
+  ]);
+
+  const configByKey = new Map(configs.map((c) => [c.key, c]));
+  const enabledCount = configs.filter((c) => c.enabled).length;
+
+  const stats: StatStripItem[] = [
+    {
+      label: "Automations enabled",
+      value: `${enabledCount} / ${WORKFLOW_REGISTRY.length}`,
+    },
+    {
+      label: "Active runs",
+      value: counts.running + counts.pending,
+    },
     { label: "Completed", value: counts.completed },
-    { label: "Failed", value: counts.failed },
-    { label: "Cancelled", value: counts.cancelled },
+    {
+      label: "Failed",
+      value: counts.failed,
+      className:
+        counts.failed > 0 ? "text-red-600 dark:text-red-400" : undefined,
+    },
   ];
 
   return (
     <PageLayout title="Workflows" actions={<AutoRefresh />}>
+      <StatStrip stats={stats} />
+
+      {/* automation settings, grouped by category */}
+      {CATEGORIES.map((category) => {
+        const defs = WORKFLOW_REGISTRY.filter((d) => d.category === category);
+        if (defs.length === 0) return null;
+        return (
+          <div key={category} className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              {category}
+            </h2>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {defs.map((def) => {
+                const config = configByKey.get(def.key);
+                return (
+                  <AutomationCard
+                    key={def.key}
+                    def={def}
+                    enabled={config?.enabled ?? true}
+                    settings={config?.settings ?? {}}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* run history */}
       {!available ? (
         <Card>
           <CardContent className="flex flex-col gap-1 py-8 text-center">
@@ -31,26 +83,9 @@ export default async function Page() {
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {stats.map((stat) => (
-              <Card key={stat.label}>
-                <CardContent className="flex flex-col gap-1">
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
-                  <span className="text-3xl font-bold tracking-tight">{stat.value}</span>
-                  {stat.hint ? (
-                    <span className="text-xs text-muted-foreground">{stat.hint}</span>
-                  ) : null}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <h2 className="text-sm font-medium">Runs ({runs.length})</h2>
-            <DataTable columns={columns} data={runs} searchPlaceholder="Search runs..." />
-          </div>
-        </>
+        <RecordSection title="Runs" count={runs.length}>
+          <DataTable columns={columns} data={runs} searchPlaceholder="Search runs..." />
+        </RecordSection>
       )}
     </PageLayout>
   );

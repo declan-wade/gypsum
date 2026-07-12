@@ -13,10 +13,10 @@ import { PageLayout } from "@/components/page-layout"
 import { DataTable } from "@/components/data-table"
 import { ModalButton } from "@/components/modal"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { RecordSection } from "@/components/record-section"
+import { StatStrip, type StatStripItem } from "@/components/stat-strip"
 import { prisma } from "@/lib/prisma"
 import { formatMoney, formatRelativeTime } from "@/lib/format"
-import { cn } from "@/lib/utils"
 import { columns as contactColumns } from "@/app/contacts/columns"
 import { ContactForm } from "@/app/contacts/forms"
 import { CompanyForm } from "@/app/companies/forms"
@@ -41,9 +41,8 @@ function initials(name: string) {
     .join("")
 }
 
-// Renders a related-records section as a card with a count pill and header
-// action. Generic so each section keeps the row typing from the entity's own
-// column definitions.
+// Related-records section: RecordSection card around the entity's own table.
+// Generic so each section keeps the row typing from its column definitions.
 function RelatedSection<T>({
   id,
   title,
@@ -59,22 +58,13 @@ function RelatedSection<T>({
   action?: React.ReactNode
 }) {
   return (
-    <Card id={id} className="scroll-mt-4 gap-3">
-      <div className="flex items-center gap-2.5 border-b px-(--card-spacing) pb-3">
-        <span className="text-sm font-semibold">{title}</span>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-          {data.length}
-        </span>
-        {action ? <div className="ml-auto">{action}</div> : null}
-      </div>
-      <div className="px-(--card-spacing)">
-        <DataTable
-          columns={columns}
-          data={data}
-          searchPlaceholder={`Search ${title.toLowerCase()}...`}
-        />
-      </div>
-    </Card>
+    <RecordSection id={id} title={title} count={data.length} action={action}>
+      <DataTable
+        columns={columns}
+        data={data}
+        searchPlaceholder={`Search ${title.toLowerCase()}...`}
+      />
+    </RecordSection>
   )
 }
 
@@ -162,7 +152,7 @@ export default async function Page({
     (project) => project.status === "ACTIVE"
   ).length
 
-  const stats: { label: string; value: string | number; className?: string }[] = [
+  const stats: StatStripItem[] = [
     { label: "Lifetime value", value: formatMoney(lifetimeValue) },
     { label: "Open deal value", value: formatMoney(openDealValue) },
     {
@@ -278,24 +268,7 @@ export default async function Page({
         </div>
       </div>
 
-      {/* stat strip */}
-      <Card className="py-0">
-        <div className="grid grid-cols-2 divide-y sm:grid-cols-3 sm:divide-x lg:grid-cols-5 lg:divide-y-0">
-          {stats.map((stat) => (
-            <div key={stat.label} className="px-5 py-3.5">
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
-              <div
-                className={cn(
-                  "mt-1 text-lg font-semibold tabular-nums",
-                  stat.className
-                )}
-              >
-                {stat.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <StatStrip stats={stats} />
 
       {/* section quick-nav */}
       <div className="flex gap-1 overflow-x-auto border-b">

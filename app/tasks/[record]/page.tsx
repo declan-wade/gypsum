@@ -19,6 +19,7 @@ import { TaskForm } from "@/app/tasks/forms";
 import { ActivityDrawer } from "@/components/activity-drawer";
 import { getActivities } from "@/lib/activity";
 import { getAuthUserOptions } from "@/lib/auth/users";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { DeleteTaskButton } from "./delete-task-button";
 
 export default async function Page({
@@ -28,19 +29,16 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [task, users, authUsers, activities] = await Promise.all([
+  const [task, authUsers, currentUserId, activities] = await Promise.all([
     prisma.task.findUnique({
       where: { id: record },
       include: {
         project: true,
-        timeEntries: { include: { user: true }, orderBy: { date: "desc" } },
+        timeEntries: { orderBy: { date: "desc" } },
       },
     }),
-    prisma.user.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
     getAuthUserOptions(),
+    getCurrentUserId(),
     getActivities("Task", record),
   ]);
 
@@ -48,7 +46,7 @@ export default async function Page({
     notFound();
   }
 
-  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const userOptions = authUsers.options;
   const assigneeName = task.assigneeId
     ? authUsers.nameById.get(task.assigneeId) ?? null
     : null;
@@ -57,7 +55,7 @@ export default async function Page({
     id: entry.id,
     date: entry.date,
     userId: entry.userId,
-    userName: entry.user.name,
+    userName: authUsers.nameById.get(entry.userId) ?? "Unknown",
     projectId: entry.projectId,
     projectName: task.project.name,
     taskId: entry.taskId,
@@ -140,7 +138,7 @@ export default async function Page({
           data={timeEntryRows}
           action={
             <ModalButton label="Add Time Entry" title="Add Time Entry">
-              <TimeEntryForm users={userOptions} projectId={task.projectId} taskId={task.id} />
+              <TimeEntryForm users={userOptions} projectId={task.projectId} taskId={task.id} currentUserId={currentUserId ?? undefined} />
             </ModalButton>
           }
         />

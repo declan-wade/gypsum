@@ -2,30 +2,31 @@ import { PageLayout } from "@/components/page-layout";
 import { DataTable } from "@/components/data-table";
 import { ModalButton } from "@/components/modal";
 import { prisma } from "@/lib/prisma";
+import { getAuthUserOptions } from "@/lib/auth/users";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { columns } from "./columns";
 import { TimeEntryForm } from "./forms";
 
 export default async function Page() {
-  const [entries, users, projects] = await Promise.all([
-    prisma.timeEntry.findMany({
-      include: { user: true, project: true },
-      orderBy: { date: "desc" },
-    }),
-    prisma.user.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.project.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const [entries, { options: userOptions, nameById }, projects, currentUserId] =
+    await Promise.all([
+      prisma.timeEntry.findMany({
+        include: { project: true },
+        orderBy: { date: "desc" },
+      }),
+      getAuthUserOptions(),
+      prisma.project.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      getCurrentUserId(),
+    ]);
 
   const data = entries.map((entry) => ({
     id: entry.id,
     date: entry.date,
     userId: entry.userId,
-    userName: entry.user.name,
+    userName: nameById.get(entry.userId) ?? "Unknown",
     projectId: entry.projectId,
     projectName: entry.project.name,
     taskId: entry.taskId,
@@ -34,7 +35,6 @@ export default async function Page() {
     description: entry.description,
   }));
 
-  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
   const projectOptions = projects.map((p) => ({ value: p.id, label: p.name }));
 
   return (
@@ -42,7 +42,7 @@ export default async function Page() {
       title="Time Tracking"
       actions={
         <ModalButton label="Add Time Entry" title="Add Time Entry">
-          <TimeEntryForm users={userOptions} projects={projectOptions} />
+          <TimeEntryForm users={userOptions} projects={projectOptions} currentUserId={currentUserId ?? undefined} />
         </ModalButton>
       }
     >

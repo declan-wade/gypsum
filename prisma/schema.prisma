@@ -94,7 +94,6 @@ model User {
 
   ownedCompanies Company[]
   ownedDeals     Deal[]
-  timeEntries    TimeEntry[]
   quotes         Quote[]
   invoices       Invoice[]
 }
@@ -258,8 +257,10 @@ model TimeEntry {
   hourlyRate      Decimal? @db.Decimal(10, 2)
   invoiced        Boolean  @default(false)
 
+  // Neon Auth user id of the person who logged the time (login users, not the
+  // CRM User model). Stored as a plain id since neon_auth.user isn't a Prisma
+  // model here — same convention as Task.assigneeId.
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

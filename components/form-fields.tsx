@@ -63,15 +63,21 @@ interface NumberFieldProps {
 
 export function FormNumberField({ field, label, placeholder, step = "any" }: NumberFieldProps) {
   const { isInvalid } = useFieldMeta(field)
+  // iOS Safari drops typed characters in `type="number"` inputs, so use a text
+  // input with a numeric keypad hint instead. Whole-number fields (step="1")
+  // get the integer keypad; everything else keeps the decimal keypad.
+  const isInteger = step === "1"
+  const inputMode = isInteger ? "numeric" : "decimal"
+  const pattern = isInteger ? "[0-9]*" : "[0-9]*[.,]?[0-9]*"
   return (
     <Field data-invalid={isInvalid}>
       <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
       <Input
         id={field.name}
         name={field.name}
-        type="number"
-        inputMode="decimal"
-        step={step}
+        type="text"
+        inputMode={inputMode}
+        pattern={pattern}
         value={field.state.value as string}
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}

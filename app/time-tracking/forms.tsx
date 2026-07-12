@@ -44,15 +44,17 @@ interface TimeEntryFormProps {
   projects?: { value: string; label: string }[];
   projectId?: string;
   taskId?: string;
+  // Neon Auth id of the signed-in user, used to pre-select "me" on a new entry.
+  currentUserId?: string;
   record?: TimeEntryRecord;
 }
 
-export function TimeEntryForm({ users, projects, projectId, taskId, record }: TimeEntryFormProps) {
+export function TimeEntryForm({ users, projects, projectId, taskId, currentUserId, record }: TimeEntryFormProps) {
   const onSuccess = useModalSuccess();
   const fixedTaskId = record?.taskId ?? taskId ?? null;
   const form = useForm({
     defaultValues: {
-      userId: record?.userId ?? "",
+      userId: record?.userId ?? currentUserId ?? "",
       projectId: record?.projectId ?? projectId ?? "",
       date: toDateInputValue(record?.date),
       durationMinutes: record?.durationMinutes != null ? String(record.durationMinutes) : "",

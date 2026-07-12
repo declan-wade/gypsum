@@ -17,6 +17,7 @@ import {
 import { columns as taskColumns, type TaskRow } from "@/app/tasks/columns";
 import { TaskForm } from "@/app/tasks/forms";
 import { getAuthUserOptions } from "@/lib/auth/users";
+import { getCurrentUserId } from "@/lib/auth/server";
 import { TimeEntryForm } from "@/app/time-tracking/forms";
 import { ProjectForm } from "@/app/projects/forms";
 import { StatusBadge } from "@/components/status-badge";
@@ -52,20 +53,17 @@ export default async function Page({
 }) {
   const { record } = await params;
 
-  const [project, users, authUsers, activities] = await Promise.all([
+  const [project, authUsers, currentUserId, activities] = await Promise.all([
     prisma.project.findUnique({
       where: { id: record },
       include: {
         company: true,
         tasks: { orderBy: { createdAt: "desc" } },
-        timeEntries: { include: { user: true }, orderBy: { date: "desc" } },
+        timeEntries: { orderBy: { date: "desc" } },
       },
     }),
-    prisma.user.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
     getAuthUserOptions(),
+    getCurrentUserId(),
     getActivities("Project", record),
   ]);
 
@@ -73,7 +71,7 @@ export default async function Page({
     notFound();
   }
 
-  const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
+  const userOptions = authUsers.options;
 
   const taskRows: TaskRow[] = project.tasks.map((task) => ({
     id: task.id,
@@ -88,7 +86,7 @@ export default async function Page({
     id: entry.id,
     date: entry.date,
     userId: entry.userId,
-    userName: entry.user.name,
+    userName: authUsers.nameById.get(entry.userId) ?? "Unknown",
     projectId: entry.projectId,
     projectName: project.name,
     taskId: entry.taskId,
@@ -188,7 +186,7 @@ export default async function Page({
         data={timeEntryRows}
         action={
           <ModalButton label="Add Time Entry" title="Add Time Entry">
-            <TimeEntryForm users={userOptions} projectId={project.id} />
+            <TimeEntryForm users={userOptions} projectId={project.id} currentUserId={currentUserId ?? undefined} />
           </ModalButton>
         }
       />

@@ -1,18 +1,22 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeftIcon, PencilIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  GlobeIcon,
+  MailIcon,
+  PackageIcon,
+  PencilIcon,
+  PhoneIcon,
+} from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { PageLayout } from "@/components/page-layout"
 import { DataTable } from "@/components/data-table"
 import { ModalButton } from "@/components/modal"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { prisma } from "@/lib/prisma"
+import { formatMoney, formatRelativeTime } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { columns as contactColumns } from "@/app/contacts/columns"
 import { ContactForm } from "@/app/contacts/forms"
 import { CompanyForm } from "@/app/companies/forms"
@@ -28,14 +32,26 @@ import { StatusBadge } from "@/components/status-badge"
 import { ActivityDrawer } from "@/components/activity-drawer"
 import { getActivities } from "@/lib/activity"
 
-// Renders a titled related-records sub-table. Generic so each section keeps the
-// row typing from the entity's own column definitions.
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]!.toUpperCase())
+    .join("")
+}
+
+// Renders a related-records section as a card with a count pill and header
+// action. Generic so each section keeps the row typing from the entity's own
+// column definitions.
 function RelatedSection<T>({
+  id,
   title,
   columns,
   data,
   action,
 }: {
+  id: string
   title: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: ColumnDef<T, any>[]
@@ -43,12 +59,22 @@ function RelatedSection<T>({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">
-        {title} ({data.length})
-      </h2>
-      <DataTable columns={columns} data={data} action={action} />
-    </div>
+    <Card id={id} className="scroll-mt-4 gap-3">
+      <div className="flex items-center gap-2.5 border-b px-(--card-spacing) pb-3">
+        <span className="text-sm font-semibold">{title}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+          {data.length}
+        </span>
+        {action ? <div className="ml-auto">{action}</div> : null}
+      </div>
+      <div className="px-(--card-spacing)">
+        <DataTable
+          columns={columns}
+          data={data}
+          searchPlaceholder={`Search ${title.toLowerCase()}...`}
+        />
+      </div>
+    </Card>
   )
 }
 
@@ -119,27 +145,84 @@ export default async function Page({
     endDate: project.endDate,
   }))
 
-  const details: { label: string; value: React.ReactNode }[] = [
-    { label: "Status", value: <StatusBadge status={company.status} /> },
-    { label: "Industry", value: company.industry ?? "—" },
+  const lifetimeValue = company.invoices.reduce(
+    (sum, invoice) => sum + Number(invoice.amountPaid),
+    0
+  )
+  const openDealValue = company.deals
+    .filter((deal) => deal.stage !== "WON" && deal.stage !== "LOST")
+    .reduce((sum, deal) => sum + Number(deal.value), 0)
+  const outstanding = company.invoices
+    .filter((invoice) => invoice.status !== "PAID" && invoice.status !== "VOID")
+    .reduce(
+      (sum, invoice) => sum + Number(invoice.total) - Number(invoice.amountPaid),
+      0
+    )
+  const activeProjects = company.projects.filter(
+    (project) => project.status === "ACTIVE"
+  ).length
+
+  const stats: { label: string; value: string | number; className?: string }[] = [
+    { label: "Lifetime value", value: formatMoney(lifetimeValue) },
+    { label: "Open deal value", value: formatMoney(openDealValue) },
     {
-      label: "Website",
-      value: company.website ? (
+      label: "Outstanding",
+      value: formatMoney(outstanding),
+      className:
+        outstanding > 0 ? "text-amber-600 dark:text-amber-400" : undefined,
+    },
+    { label: "Active projects", value: activeProjects },
+    {
+      label: "Last activity",
+      value: activities[0]
+        ? formatRelativeTime(activities[0].createdAt)
+        : "—",
+    },
+  ]
+
+  const sections = [
+    { id: "contacts", label: "Contacts", count: company.contacts.length },
+    { id: "projects", label: "Projects", count: company.projects.length },
+    { id: "deals", label: "Deals", count: company.deals.length },
+    { id: "quotes", label: "Quotes", count: company.quotes.length },
+    { id: "invoices", label: "Invoices", count: company.invoices.length },
+  ]
+
+  const meta: { icon: typeof GlobeIcon; node: React.ReactNode }[] = []
+  if (company.industry) {
+    meta.push({ icon: PackageIcon, node: company.industry })
+  }
+  if (company.website) {
+    meta.push({
+      icon: GlobeIcon,
+      node: (
         <a
           href={company.website}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary underline underline-offset-4"
+          className="hover:text-foreground hover:underline"
         >
-          {company.website}
+          {company.website.replace(/^https?:\/\//, "")}
         </a>
-      ) : (
-        "—"
       ),
-    },
-    { label: "Email", value: company.email ?? "—" },
-    { label: "Phone", value: company.phone ?? "—" },
-  ]
+    })
+  }
+  if (company.email) {
+    meta.push({
+      icon: MailIcon,
+      node: (
+        <a
+          href={`mailto:${company.email}`}
+          className="hover:text-foreground hover:underline"
+        >
+          {company.email}
+        </a>
+      ),
+    })
+  }
+  if (company.phone) {
+    meta.push({ icon: PhoneIcon, node: company.phone })
+  }
 
   return (
     <PageLayout
@@ -170,23 +253,68 @@ export default async function Page({
         </>
       }
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {details.map((detail) => (
-            <div key={detail.label} className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {detail.label}
-              </span>
-              <span className="text-sm">{detail.value}</span>
+      {/* identity header */}
+      <div className="flex items-center gap-4">
+        <div className="grid size-14 shrink-0 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-lg font-bold tracking-wide text-primary">
+          {initials(company.name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl font-semibold tracking-tight">
+              {company.name}
+            </h1>
+            <StatusBadge status={company.status} />
+          </div>
+          {meta.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {meta.map((item, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5">
+                  <item.icon className="size-3.5 opacity-70" />
+                  {item.node}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* stat strip */}
+      <Card className="py-0">
+        <div className="grid grid-cols-2 divide-y sm:grid-cols-3 sm:divide-x lg:grid-cols-5 lg:divide-y-0">
+          {stats.map((stat) => (
+            <div key={stat.label} className="px-5 py-3.5">
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+              <div
+                className={cn(
+                  "mt-1 text-lg font-semibold tabular-nums",
+                  stat.className
+                )}
+              >
+                {stat.value}
+              </div>
             </div>
           ))}
-        </CardContent>
+        </div>
       </Card>
 
+      {/* section quick-nav */}
+      <div className="flex gap-1 overflow-x-auto border-b">
+        {sections.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {section.label}
+            <span className="rounded-full bg-muted px-1.5 py-px text-[10.5px] font-semibold">
+              {section.count}
+            </span>
+          </a>
+        ))}
+      </div>
+
       <RelatedSection
+        id="contacts"
         title="Contacts"
         columns={contactColumns}
         data={company.contacts}
@@ -197,6 +325,7 @@ export default async function Page({
         }
       />
       <RelatedSection
+        id="projects"
         title="Projects"
         columns={projectColumns}
         data={projectRows}
@@ -207,6 +336,7 @@ export default async function Page({
         }
       />
       <RelatedSection
+        id="deals"
         title="Deals"
         columns={dealColumns}
         data={dealRows}
@@ -217,6 +347,7 @@ export default async function Page({
         }
       />
       <RelatedSection
+        id="quotes"
         title="Quotes"
         columns={quoteColumns}
         data={quoteRows}
@@ -227,6 +358,7 @@ export default async function Page({
         }
       />
       <RelatedSection
+        id="invoices"
         title="Invoices"
         columns={invoiceColumns}
         data={invoiceRows}

@@ -19,7 +19,12 @@ function DialogBackdrop({
     <DialogPrimitive.Backdrop
       data-slot="dialog-backdrop"
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        // `fixed inset-0` with a full-viewport backdrop overlays the visual
+        // viewport on iOS Safari and swallows taps on the popup's inputs (the
+        // keyboard never opens — "taps do nothing"). base-ui's documented fix:
+        // switch the backdrop to `absolute` under the iOS-only
+        // `-webkit-touch-callout` feature query. No-op on every other browser.
+        "fixed inset-0 z-50 min-h-dvh bg-black/50 supports-[-webkit-touch-callout:none]:absolute supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
